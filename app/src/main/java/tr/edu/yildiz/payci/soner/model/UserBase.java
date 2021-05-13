@@ -13,7 +13,7 @@ public class UserBase {
     public UserBase() {
         userList = new ArrayList<Person>();
 
-        userList.add( new Person("alice", "123654", R.drawable.ic_launcher_background));
+        /*userList.add( new Person("alice", "123654", R.drawable.ic_launcher_background));
         userList.add( new Person("bob", "123", R.drawable.ic_launcher_background));
         userList.add( new Person("charlotte", "", R.drawable.ic_launcher_background));
         userList.add( new Person("emma", "", R.drawable.ic_launcher_background));
@@ -25,7 +25,7 @@ public class UserBase {
         userList.add( new Person("olivia", "", R.drawable.ic_launcher_background));
         userList.add( new Person("rory", "123456", R.drawable.ic_launcher_background));
         userList.add( new Person("soner", "123", R.drawable.ic_launcher_background));
-        userList.add( new Person("william", "", R.drawable.ic_launcher_background));
+        userList.add( new Person("william", "", R.drawable.ic_launcher_background));*/
     }
 
 

@@ -6,6 +6,8 @@
     android:layout_height="match_parent"
     tools:context=".SignUpActivity">
 
+
+
     <TextView
         android:id="@+id/passwordReLabel"
         android:layout_width="140dp"
@@ -31,6 +33,22 @@
         app:layout_constraintBottom_toBottomOf="@+id/passTxt"
         app:layout_constraintStart_toStartOf="parent"
         tools:ignore="RtlCompat" />
+
+    <!--bg_circle.xml-->
+
+
+    <ImageView
+        android:id="@+id/avatarBox"
+        android:layout_width="126dp"
+        android:layout_height="109dp"
+        android:layout_marginTop="28dp"
+        android:shape="oval"
+        android:src="@drawable/user_anonymous"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/signupHeaderTxt">
+    </ImageView>
 
     <TextView
         android:id="@+id/birthDateLabel"
@@ -88,13 +106,13 @@
         android:id="@+id/signupHeaderTxt"
         android:layout_width="298dp"
         android:layout_height="37dp"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="16dp"
         android:text="Join Us!"
         android:textAlignment="center"
         android:textSize="30sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.496"
+        app:layout_constraintHorizontal_bias="0.495"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -102,13 +120,13 @@
         android:id="@+id/firstNameTxt"
         android:layout_width="210dp"
         android:layout_height="42dp"
-        android:layout_marginTop="68dp"
+        android:layout_marginTop="28dp"
         android:layout_marginEnd="32dp"
         android:ems="10"
         android:hint="John"
         android:inputType="textPersonName"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/signupHeaderTxt" />
+        app:layout_constraintTop_toBottomOf="@+id/avatarBox" />
 
     <EditText
         android:id="@+id/lastNameTxt"
@@ -197,7 +215,7 @@
         android:id="@+id/signUpBtn"
         android:layout_width="184dp"
         android:layout_height="50dp"
-        android:layout_marginTop="48dp"
+        android:layout_marginTop="16dp"
         android:text="SIGNUP"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.497"

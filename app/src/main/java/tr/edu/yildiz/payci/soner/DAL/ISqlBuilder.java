@@ -1,5 +1,6 @@
 package tr.edu.yildiz.payci.soner.DAL;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public interface ISqlBuilder {
@@ -10,13 +11,13 @@ public interface ISqlBuilder {
 
     public String BuildDeleteTableCommand();
 
-    public String BuildSelectCommand();
+    public String BuildSelectCommand(String tableName, ArrayList<String> selectColumns, HashMap<String, String> whereParams);
 
-    public String BuildCreateCommand();
+    public String BuildInsertCommand();
 
     public String BuildUpdateCommand();
 
-    public String BuildDeleteCommand();
+    public String BuildDeleteCommand(String tableName, HashMap<String, Integer> whereParams);
 
 
 

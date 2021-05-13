@@ -1,18 +1,29 @@
 package tr.edu.yildiz.payci.soner.DAL;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+
+import tr.edu.yildiz.payci.soner.model.Person;
 
 public class DbHelper extends SQLiteOpenHelper {
 
     private static final SqlBuilder _sqlBuilder = new SqlBuilder();
 
-    // Database Info
+    //<editor-fold desc="Table Names">
     private static final String DATABASE_NAME = "QuestionPool";
     private static final int DATABASE_VERSION = 3;
+    //</editor-fold>
 
     //<editor-fold desc="Table Names">
     private static final String TABLE_USERS = "Users";
@@ -34,7 +45,6 @@ public class DbHelper extends SQLiteOpenHelper {
     private static final String KEY_DATE_OF_BIRTH = "birthDate";
     //</editor-fold>
 
-
     //<editor-fold desc="Questions Table Columns">
     private static final String KEY_QUESTION_ID = "id";
     private static final String KEY_QUESTION_USER_FK = "userId";
@@ -51,7 +61,7 @@ public class DbHelper extends SQLiteOpenHelper {
     private static final String KEY_QUESTION_MEDIA_ID = "id";
     private static final String KEY_QUESTION_MEDIA_CONTENT = "content";
     private static final String KEY_QUESTION_MEDIA_TYPE = "contentType";
-    private static final String KEY_QUESTION_MEDIA_FK = "questionId";
+    private static final String KEY_QUESTION_MEDIA_QUESTIONS_FK = "questionId";
     //</editor-fold>
 
     //<editor-fold desc="Exams Table Columns">
@@ -111,13 +121,13 @@ public class DbHelper extends SQLiteOpenHelper {
             put(KEY_LAST_NAME, "TEXT");
             put(KEY_USERNAME, "TEXT");
             put(KEY_PASSWORD, "TEXT");
-            put(KEY_AVATAR, "TEXT");
+            put(KEY_AVATAR, "BLOB");
             put(KEY_EMAIL, "TEXT");
             put(KEY_PHONE, "TEXT");
             put(KEY_DATE_OF_BIRTH, "TEXT");
         }};
 
-        HashMap<String, String> createQuestionTableHashmap = new HashMap<String, String>() {{
+        HashMap<String, String> createQuestionTableHashMap = new HashMap<String, String>() {{
             put(KEY_QUESTION_ID, "INTEGER PRIMARY KEY");
             put(KEY_QUESTION_USER_FK, "INTEGER REFERENCES " + TABLE_USERS);
             put(KEY_QUESTION_TEXT, "TEXT");
@@ -129,15 +139,41 @@ public class DbHelper extends SQLiteOpenHelper {
             put(KEY_QUESTION_CORRECT_ANSWER, "TEXT");
         }};
 
+        HashMap<String, String> createQuestionMediasTableHashMap = new HashMap<String, String>() {{
+            put(KEY_QUESTION_MEDIA_ID, "INTEGER PRIMARY KEY");
+            put(KEY_QUESTION_MEDIA_QUESTIONS_FK, "INTEGER REFERENCES " + TABLE_QUESTIONS);
+            put(KEY_QUESTION_MEDIA_CONTENT, "BLOB");
+            put(KEY_QUESTION_MEDIA_TYPE, "TEXT");
+        }};
+
+        HashMap<String, String> createExamsTableHashMap = new HashMap<String, String>() {{
+            put(KEY_EXAM_ID, "INTEGER PRIMARY KEY");
+            put(KEY_EXAM_USER_ID, "INTEGER REFERENCES " + TABLE_USERS);
+            put(KEY_EXAM_NAME, "TEXT");
+            put(KEY_EXAM_DIFFICULTY, "INT");
+            put(KEY_EXAM_MIN_DURATION, "INT");
+            put(KEY_EXAM_MAX_DURATION, "INT");
+        }};
+
+        HashMap<String, String> createExamsQuestionsTableHashMap = new HashMap<String, String>() {{
+            put(KEY_QUESTIONS_EXAMS_EXAM_ID, "INTEGER REFERENCES " + TABLE_EXAMS);
+            put(KEY_QUESTIONS_EXAMS_QUESTION_ID, "INTEGER REFERENCES " + TABLE_QUESTIONS);
+            put(KEY_EXAM_DIFFICULTY, "REAL");
+        }};
+
         String CREATE_USERS_TABLE_SQL = _sqlBuilder.BuildCreateTableCommand(TABLE_USERS, createUserTableHashMap);
-        String CREATE_QUESTIONS_TABLE_SQL = _sqlBuilder.BuildCreateTableCommand(TABLE_QUESTIONS, createQuestionTableHashmap);
-
-
+        String CREATE_QUESTIONS_TABLE_SQL = _sqlBuilder.BuildCreateTableCommand(TABLE_QUESTIONS, createQuestionTableHashMap);
+        String CREATE_QUESTION_MEDIAS_TABLE_SQL = _sqlBuilder.BuildCreateTableCommand(TABLE_QUESTION_MEDIAS, createQuestionMediasTableHashMap);
+        String CREATE_EXAMS_TABLE_SQL = _sqlBuilder.BuildCreateTableCommand(TABLE_EXAMS, createExamsTableHashMap);
+        String CREATE_QUESTIONS_TO_EXAMS_TABLE_SQL = _sqlBuilder.BuildCreateTableCommand(TABLE_QUESTIONS_TO_EXAMS, createExamsQuestionsTableHashMap);
 
 
 
         db.execSQL(CREATE_USERS_TABLE_SQL);
         db.execSQL(CREATE_QUESTIONS_TABLE_SQL);
+        db.execSQL(CREATE_QUESTION_MEDIAS_TABLE_SQL);
+        db.execSQL(CREATE_EXAMS_TABLE_SQL);
+        db.execSQL(CREATE_QUESTIONS_TO_EXAMS_TABLE_SQL);
     }
 
     // Called when the database needs to be upgraded.
@@ -147,10 +183,102 @@ public class DbHelper extends SQLiteOpenHelper {
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         if (oldVersion != newVersion) {
             // Simplest implementation is to drop all old tables and recreate them
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
+            db.execSQL("DROP TABLE IF EXISTS " + TABLE_QUESTIONS_TO_EXAMS);
+            db.execSQL("DROP TABLE IF EXISTS " + TABLE_QUESTION_MEDIAS);
             db.execSQL("DROP TABLE IF EXISTS " + TABLE_QUESTIONS);
+            db.execSQL("DROP TABLE IF EXISTS " + TABLE_EXAMS);
+            db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
 
             onCreate(db);
         }
     }
+
+    public List<Person> getUserByUsernameAndPassword(String username, String password) {
+        List<Person> users = new ArrayList<Person>();
+        try {
+            ArrayList<String> selectColumns = new ArrayList<String>() {{ add("*"); }};
+            HashMap<String, String> whereParams = new HashMap<String, String>() {{
+                put(KEY_USERNAME, username);
+                put(KEY_PASSWORD, password);
+            }};
+
+            SQLiteDatabase db = this.getReadableDatabase();
+            String myFormat = "dd/MM/yyyy"; //In which you need put here
+            SimpleDateFormat sdf = new SimpleDateFormat(myFormat, Locale.US);
+
+            String sql = _sqlBuilder.BuildSelectCommand(TABLE_USERS, selectColumns, whereParams);
+            Cursor c = db.rawQuery(sql, null);
+
+            if (c.moveToFirst()){
+                do {
+                    int userId = c.getInt(0);
+                    String userFirstName = c.getString(1);
+                    String userLastName = c.getString(2);
+                    String userUsername = c.getString(3);
+                    String userPassword = c.getString(4);
+                    byte[] userAvatar = c.getBlob(5);
+                    String userEmail = c.getString(6);
+                    String userPhone = c.getString(7);
+                    Date userDateOfBirth = new SimpleDateFormat("dd/MM/yyyy", Locale.US).parse(c.getString(8));
+
+                    /*String avatarPath = userUsername+"_avatar.jpg";
+                    File file = new File(avatarPath);
+                    FileOutputStream avatarFile = new FileOutputStream(file);
+                    avatarFile.write(userAvatar);*/
+                    users.add(new Person(userId, userFirstName, userLastName, userEmail, userPassword, userAvatar, userPhone, userDateOfBirth));
+                } while(c.moveToNext());
+            }
+            c.close();
+
+            return users;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return users;
+        }
+    }
+
+
+    public List<Person> getUsers() {
+        List<Person> users = new ArrayList<Person>();
+
+        try {
+            ArrayList<String> selectColumns = new ArrayList<String>() {{ add("*"); }};
+
+            SQLiteDatabase db = this.getReadableDatabase();
+            String myFormat = "dd/MM/yyyy"; //In which you need put here
+            SimpleDateFormat sdf = new SimpleDateFormat(myFormat, Locale.US);
+
+            String sql = _sqlBuilder.BuildSelectCommand(TABLE_USERS, selectColumns, null);
+            Cursor c = db.rawQuery(sql, null);
+
+            if (c.moveToFirst()){
+                do {
+                    int userId = c.getInt(0);
+                    String userFirstName = c.getString(1);
+                    String userLastName = c.getString(2);
+                    String userUsername = c.getString(3);
+                    String userPassword = c.getString(4);
+                    byte[] userAvatar = c.getBlob(5);
+                    String userEmail = c.getString(6);
+                    String userPhone = c.getString(7);
+                    Date userDateOfBirth = new SimpleDateFormat("dd/MM/yyyy", Locale.US).parse(c.getString(8));
+
+                    /*String avatarPath = userUsername+"_avatar.jpg";
+                    File file = new File(avatarPath);
+                    FileOutputStream avatarFile = new FileOutputStream(file);
+                    avatarFile.write(userAvatar);*/
+                    users.add(new Person(userId, userFirstName, userLastName, userEmail, userPassword, userAvatar, userPhone, userDateOfBirth));
+                } while(c.moveToNext());
+            }
+            c.close();
+
+            return users;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return users;
+        }
+    }
+
+
+
 }

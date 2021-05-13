@@ -1,21 +1,21 @@
 package tr.edu.yildiz.payci.soner;
 
 import android.content.Intent;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import java.util.ArrayList;
-
 import tr.edu.yildiz.payci.soner.model.Person;
 import tr.edu.yildiz.payci.soner.model.UserBase;
+import tr.edu.yildiz.payci.soner.DAL.DbHelper;
 
 public class MainActivity extends AppCompatActivity
 {
-
+    DbHelper dbHelper;
     EditText username;
     EditText password;
     TextView textMessage;
@@ -47,6 +47,10 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        ActionBar actionBar = getSupportActionBar();
+        actionBar.hide();
+        dbHelper = new DbHelper(this);
+
         defineVariables();
         defineListeners();
     }
@@ -59,7 +63,6 @@ public class MainActivity extends AppCompatActivity
         password = (EditText) findViewById(R.id.passwordTxt);
         btnSignIn = (Button) findViewById(R.id.btnSignIn);
         btnSignUp = (Button) findViewById(R.id.btnSignUp);
-        textMessage = (TextView) findViewById(R.id.LoginMsgTxt);
     }
 
 
@@ -84,9 +87,9 @@ public class MainActivity extends AppCompatActivity
         btnSignUp.setOnClickListener((v -> {
             Intent intent = new Intent(MainActivity.this, SignUpActivity.class);
 
-            ArrayList<UserBase> userBases = new ArrayList<UserBase>();
-            userBases.add(userBase);
-            intent.putExtra("userBases", userBases);
+            //ArrayList<UserBase> userBases = new ArrayList<UserBase>();
+            //userBases.add(userBase);
+            //intent.putExtra("userBases", userBases);
             this.startActivity(intent);
         }));
 

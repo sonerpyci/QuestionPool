@@ -1,5 +1,6 @@
 package tr.edu.yildiz.payci.soner.DAL;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -54,12 +55,27 @@ public class SqlBuilder implements ISqlBuilder {
     }
 
     @Override
-    public String BuildSelectCommand() {
-        return null;
+    public String BuildSelectCommand(String tableName, ArrayList<String> selectColumns, HashMap<String, String> whereParams) {
+        String selectColumnsSql = String.join(", ", selectColumns) + " ";
+        String sql = String.format("SELECT %s FROM %s ", selectColumnsSql, tableName);
+
+        if (whereParams != null) {
+            sql += " WHERE";
+            StringJoiner joiner = new StringJoiner(" AND");
+            Iterator iterator = whereParams.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry keyValuePair = (Map.Entry)iterator.next();
+                String joinerStr = !iterator.hasNext() ? " %s=%d, " : " %s=%d;";
+                joiner.add(String.format(joinerStr, keyValuePair.getKey(), keyValuePair.getValue()));
+                iterator.remove();
+            }
+            sql += joiner.toString();
+        }
+        return sql;
     }
 
     @Override
-    public String BuildCreateCommand() {
+    public String BuildInsertCommand() {
         return null;
     }
 
@@ -69,7 +85,8 @@ public class SqlBuilder implements ISqlBuilder {
     }
 
     @Override
-    public String BuildDeleteCommand() {
+    public String BuildDeleteCommand(String tableName, HashMap<String, Integer> whereParams) {
+
         return null;
     }
 }
