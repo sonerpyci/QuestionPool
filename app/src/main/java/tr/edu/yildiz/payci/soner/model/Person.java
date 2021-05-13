@@ -6,7 +6,7 @@ import java.util.Date;
 import tr.edu.yildiz.payci.soner.R;
 
 public class Person {
-    private int id;
+    private long id;
     private String firstName;
     private String lastName;
     private String username;
@@ -22,7 +22,7 @@ public class Person {
         this.avatar = avatar;
     }
 
-    public Person(int id, String firstName, String lastName, String email, String password, byte[] avatar, String phone, Date birthDate) {
+    public Person(long id, String firstName, String lastName, String email, String password, byte[] avatar, String phone, Date birthDate) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -34,11 +34,11 @@ public class Person {
         this.birthDate = birthDate;
     }
 
-    public int getId() {
+    public long getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(long id) {
         this.id = id;
     }
 

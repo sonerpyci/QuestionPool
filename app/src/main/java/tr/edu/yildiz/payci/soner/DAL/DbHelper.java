@@ -4,6 +4,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.database.sqlite.SQLiteStatement;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -193,51 +194,6 @@ public class DbHelper extends SQLiteOpenHelper {
         }
     }
 
-    public List<Person> getUserByUsernameAndPassword(String username, String password) {
-        List<Person> users = new ArrayList<Person>();
-        try {
-            ArrayList<String> selectColumns = new ArrayList<String>() {{ add("*"); }};
-            HashMap<String, String> whereParams = new HashMap<String, String>() {{
-                put(KEY_USERNAME, username);
-                put(KEY_PASSWORD, password);
-            }};
-
-            SQLiteDatabase db = this.getReadableDatabase();
-            String myFormat = "dd/MM/yyyy"; //In which you need put here
-            SimpleDateFormat sdf = new SimpleDateFormat(myFormat, Locale.US);
-
-            String sql = _sqlBuilder.BuildSelectCommand(TABLE_USERS, selectColumns, whereParams);
-            Cursor c = db.rawQuery(sql, null);
-
-            if (c.moveToFirst()){
-                do {
-                    int userId = c.getInt(0);
-                    String userFirstName = c.getString(1);
-                    String userLastName = c.getString(2);
-                    String userUsername = c.getString(3);
-                    String userPassword = c.getString(4);
-                    byte[] userAvatar = c.getBlob(5);
-                    String userEmail = c.getString(6);
-                    String userPhone = c.getString(7);
-                    Date userDateOfBirth = new SimpleDateFormat("dd/MM/yyyy", Locale.US).parse(c.getString(8));
-
-                    /*String avatarPath = userUsername+"_avatar.jpg";
-                    File file = new File(avatarPath);
-                    FileOutputStream avatarFile = new FileOutputStream(file);
-                    avatarFile.write(userAvatar);*/
-                    users.add(new Person(userId, userFirstName, userLastName, userEmail, userPassword, userAvatar, userPhone, userDateOfBirth));
-                } while(c.moveToNext());
-            }
-            c.close();
-
-            return users;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return users;
-        }
-    }
-
-
     public List<Person> getUsers() {
         List<Person> users = new ArrayList<Person>();
 
@@ -279,6 +235,168 @@ public class DbHelper extends SQLiteOpenHelper {
         }
     }
 
+    public Person insertUser(Person person) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.US);
 
+            ArrayList<String> createUserTableHashMap = new ArrayList<String>() {{
+                add(KEY_FIRST_NAME);
+                add(KEY_LAST_NAME);
+                add(KEY_USERNAME);
+                add(KEY_PASSWORD);
+                add(KEY_EMAIL);
+                add(KEY_PHONE);
+                add(KEY_DATE_OF_BIRTH);
+                add(KEY_AVATAR);
+            }};
+
+            String insertUserSql = _sqlBuilder.BuildInsertCommand(TABLE_USERS, createUserTableHashMap);
+
+            SQLiteDatabase db = this.getWritableDatabase();
+            db.beginTransaction();
+            SQLiteStatement insertStmt = db.compileStatement(insertUserSql);
+
+            insertStmt.clearBindings();
+
+            insertStmt.bindString(1, person.getFirstName());
+            insertStmt.bindString(2, person.getLastName());
+            insertStmt.bindString(3, person.getUsername());
+            insertStmt.bindString(4, person.getPassword());
+            insertStmt.bindString(5, person.getEmail());
+            insertStmt.bindString(6, person.getPhone());
+            insertStmt.bindString(7, sdf.format(person.getBirthDate()));
+            insertStmt.bindBlob(8, person.getAvatar());
+
+            long userId = insertStmt.executeInsert();
+            db.setTransactionSuccessful();
+            db.endTransaction();
+
+            person.setId(userId);
+
+            return person;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return person;
+        }
+    }
+
+    public boolean saveBytes(byte[] bytes, int id){
+
+        boolean ret = false;
+        SQLiteDatabase db = getWritableDatabase();
+
+
+        try{
+
+            String sql   =   "INSERT INTO IMAGES "
+                    + " ( IMAGE_ID"
+                    + ", IMAGE_BLOB"
+                    + " ) VALUES(?,?)";
+
+            SQLiteStatement insertStmt      =   db.compileStatement(sql);
+            insertStmt.clearBindings();
+            insertStmt.bindLong(1, id);
+            insertStmt.bindBlob(2, bytes);
+            insertStmt.executeInsert();
+
+            db.setTransactionSuccessful();
+            db.endTransaction();
+
+            ret = true;
+        }catch(Exception e){
+            e.printStackTrace();
+            ret = false;
+        }
+
+        return ret;
+    }
+
+    /*public byte[] getBytes( int id) throws Exception {
+
+        byte[] ret = null;
+
+        try {
+
+            String selectQuery = "SELECT  I.IMAGE_BLOB "
+                    + "         FROM IMAGES I WHERE I.IMAGE_ID = ?";
+
+            SQLiteDatabase db = this.getReadableDatabase();
+            Cursor c = db.rawQuery(selectQuery,new String[]{String.valueOf(id)});
+
+
+            if (!c.isClosed() && c.moveToFirst() && c.getCount() > 0) {
+
+                if (c.getBlob(c.getColumnIndex("IMAGE_BLOB")) != null)
+                {
+                    ret = c.getBlob(c.getColumnIndex("IMAGE_BLOB"));
+
+                }
+                c.close();
+                if (db != null && db.isOpen())
+                    db.close();
+            }
+            System.gc();
+        } catch (Exception e) {
+            System.gc();
+            throw e;
+
+        }
+    }*/
+
+
+    public boolean checkIfUserExists(String email) {
+        try {
+            ArrayList<String> selectColumns = new ArrayList<String>() {{ add(KEY_EMAIL); }};
+            HashMap<String, String> whereParams = new HashMap<String, String>() {{
+                put(KEY_EMAIL, email);
+            }};
+
+            SQLiteDatabase db = this.getReadableDatabase();
+
+            String sql = _sqlBuilder.BuildSelectCommand(TABLE_USERS, selectColumns, whereParams);
+            Cursor c = db.rawQuery(sql, null);
+
+            if (!(c.moveToFirst()) || c.getCount() == 0){
+                c.close();
+                return false; // user not exists
+            }
+            c.close();
+            return true; // user exists
+        } catch (Exception e) {
+            e.printStackTrace();
+            // maybe any undhandled exception with email etc...
+            // return true to prevent signup operation with non-clear data.
+            return true;
+        }
+    }
+
+    public boolean checkUsernameAndPassword(String username, String password) {
+        List<Person> users = new ArrayList<Person>();
+        try {
+            ArrayList<String> selectColumns = new ArrayList<String>() {{ add("*"); }};
+            HashMap<String, String> whereParams = new HashMap<String, String>() {{
+                put(KEY_USERNAME, username);
+                put(KEY_PASSWORD, password);
+            }};
+
+            SQLiteDatabase db = this.getReadableDatabase();
+            String myFormat = "dd/MM/yyyy"; //In which you need put here
+
+
+            String sql = _sqlBuilder.BuildSelectCommand(TABLE_USERS, selectColumns, whereParams);
+            Cursor c = db.rawQuery(sql, null);
+
+
+            if (!(c.moveToFirst()) || c.getCount() == 0){
+                c.close();
+                return false; // user not exists
+            }
+            c.close(); // user exists
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false; // user not exists
+        }
+    }
 
 }

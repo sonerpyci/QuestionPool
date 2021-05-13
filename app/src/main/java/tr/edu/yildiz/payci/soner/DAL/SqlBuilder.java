@@ -28,18 +28,19 @@ public class SqlBuilder implements ISqlBuilder {
         * */
         StringJoiner joiner = new StringJoiner(" ,");
 
-        String sql = String.format("CREATE TABLE %s ( ", tableName);
+        String sql = String.format("CREATE TABLE %s ", tableName);
 
+        String keysSection = "( %s );";
 
         Iterator iterator = createSpec.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry keyValuePair = (Map.Entry)iterator.next();
-            String joinerStr = !iterator.hasNext() ? " %s %s, " : " %s %s );";
+            String joinerStr = " %s %s ";
             joiner.add(String.format(joinerStr, keyValuePair.getKey(), keyValuePair.getValue()));
             iterator.remove();
         }
 
-        sql += joiner.toString();
+        sql += String.format(keysSection, joiner.toString());
         System.out.println(String.format("SQL : %s", sql));
         return sql;
     }
@@ -65,8 +66,8 @@ public class SqlBuilder implements ISqlBuilder {
             Iterator iterator = whereParams.entrySet().iterator();
             while (iterator.hasNext()) {
                 Map.Entry keyValuePair = (Map.Entry)iterator.next();
-                String joinerStr = !iterator.hasNext() ? " %s=%d, " : " %s=%d;";
-                joiner.add(String.format(joinerStr, keyValuePair.getKey(), keyValuePair.getValue()));
+                String joinerStr = !iterator.hasNext() ? " %s='%s' " : " %s='%s';";
+                joiner.add(String.format(joinerStr, keyValuePair.getKey(), keyValuePair.getValue().toString()));
                 iterator.remove();
             }
             sql += joiner.toString();
@@ -75,8 +76,30 @@ public class SqlBuilder implements ISqlBuilder {
     }
 
     @Override
-    public String BuildInsertCommand() {
-        return null;
+    public String BuildInsertCommand(String tableName, ArrayList<String> insertSpec) {
+        /*
+        String CREATE_USERS_TABLE = "INSERT INTO TABLE_USERS" +
+            "(KEY_FIRST_NAME, KEY_LAST_NAME, KEY_USERNAME, KEY_PASSWORD, KEY_AVATAR, KEY_EMAIL, KEY_PHONE, KEY_DATE_OF_BIRTH, KEY_AVATAR)" +
+            "VALUES (?, ?, ?, ....);
+        */
+
+        StringJoiner keysJoiner = new StringJoiner(", ");
+        StringJoiner valuesJoiner = new StringJoiner(", ");
+
+        String sql = String.format("INSERT INTO %s ", tableName);
+
+        String keysSection = " ( %s )";
+        String valuesSection = " VALUES ( %s );";
+
+        for (String key: insertSpec) {
+            keysJoiner.add(key);
+            valuesJoiner.add("?");
+        }
+
+        sql += String.format(keysSection, keysJoiner.toString()) + " " + String.format(valuesSection, valuesJoiner.toString());
+
+        System.out.println(String.format("SQL : %s", sql));
+        return sql;
     }
 
     @Override

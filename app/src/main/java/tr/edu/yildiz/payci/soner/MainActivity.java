@@ -21,7 +21,6 @@ public class MainActivity extends AppCompatActivity
     TextView textMessage;
     Button btnSignIn;
     Button btnSignUp;
-    UserBase userBase;
     Integer attempt;
 
     private void cleanTextBoxes()
@@ -32,15 +31,7 @@ public class MainActivity extends AppCompatActivity
 
     private boolean checkPerson()
     {
-        for (Person aPerson : userBase.GetUserList())
-        {
-            if ( username.getText().toString().equals(aPerson.getUsername()) &&
-                 UserBase.convertStringToSHA256(password.getText().toString()).equals(aPerson.getPassword()))
-            {
-                return true;
-            }
-        }
-        return false;
+        return dbHelper.checkUsernameAndPassword(username.getText().toString(), UserBase.convertStringToSHA256(password.getText().toString()));
     }
 
     @Override
@@ -55,10 +46,8 @@ public class MainActivity extends AppCompatActivity
         defineListeners();
     }
 
-
     public void defineVariables() {
         attempt = 0;
-        userBase = new UserBase();
         username = (EditText) findViewById(R.id.usernameTxt);
         password = (EditText) findViewById(R.id.passwordTxt);
         btnSignIn = (Button) findViewById(R.id.btnSignIn);
@@ -72,22 +61,21 @@ public class MainActivity extends AppCompatActivity
             //this.startActivity(intent);
             if (checkPerson()) {
                 attempt = 0;
-                textMessage.setText("Credentials that passed are true!");
+                Toast.makeText(MainActivity.this, String.format( "Logged In Successfully!" , 3-attempt), Toast.LENGTH_SHORT).show();
             } else {
                 attempt += 1;
-                textMessage.setText(String.format( "Wrong username/password. You have {%d}" , 3-attempt));
+                //textMessage.setText(String.format( "Wrong username/password. You have {%d}" , 3-attempt));
+                Toast.makeText(MainActivity.this, String.format( "Wrong username/password. You have {%d} Attempts." , 3-attempt), Toast.LENGTH_SHORT).show();
                 if (attempt >= 3)  {
                     btnSignIn.setEnabled(false);
                     Toast.makeText(MainActivity.this, "Wrong Credentials passed three times in a row. Signin feature Disabled.", Toast.LENGTH_SHORT).show();
                 }
             }
-
         }));
 
         btnSignUp.setOnClickListener((v -> {
             Intent intent = new Intent(MainActivity.this, SignUpActivity.class);
 
-            //ArrayList<UserBase> userBases = new ArrayList<UserBase>();
             //userBases.add(userBase);
             //intent.putExtra("userBases", userBases);
             this.startActivity(intent);

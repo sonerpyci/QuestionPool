@@ -13,7 +13,7 @@ public interface ISqlBuilder {
 
     public String BuildSelectCommand(String tableName, ArrayList<String> selectColumns, HashMap<String, String> whereParams);
 
-    public String BuildInsertCommand();
+    public String BuildInsertCommand(String tableName, ArrayList<String> insertSpec);
 
     public String BuildUpdateCommand();
 
