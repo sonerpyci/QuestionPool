@@ -148,8 +148,6 @@ public class SignUpActivity extends AppCompatActivity {
         // convert birthDate to Date
         Date birthDateAsDate = new SimpleDateFormat("dd/MM/yyyy", Locale.US).parse(birthDate.getText().toString());
 
-
-        //     Person(long id, String firstName, String lastName, String email, String password, byte[] avatar, String phone, Date birthDate)
         Person person = new Person(
                 0,
                 firstName.getText().toString().trim(),
@@ -161,10 +159,11 @@ public class SignUpActivity extends AppCompatActivity {
                 birthDateAsDate
         );
 
+        // insert new user and grab new user object with Id value.
         person = dbHelper.insertUser(person);
 
         if (person.getId() != 0){
-            Toast.makeText(SignUpActivity.this, "Signup successfull!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(SignUpActivity.this, "Signup successful!", Toast.LENGTH_SHORT).show();
         }
 
     }
@@ -188,14 +187,12 @@ public class SignUpActivity extends AppCompatActivity {
                 throw new Exception("Incorrect E-mail Pattern.");
             //</editor-fold>
 
-
             //<editor-fold desc="Database Validations">
             if(dbHelper.checkIfUserExists(email.getText().toString()))
                 throw new Exception("An user already exists with given email.");
             //</editor-fold>
 
             return true;
-
         } catch (Exception E) {
             Toast.makeText(SignUpActivity.this, E.getMessage(), Toast.LENGTH_SHORT).show();
             return false;

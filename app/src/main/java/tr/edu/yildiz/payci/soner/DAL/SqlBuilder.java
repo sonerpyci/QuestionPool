@@ -66,7 +66,7 @@ public class SqlBuilder implements ISqlBuilder {
             Iterator iterator = whereParams.entrySet().iterator();
             while (iterator.hasNext()) {
                 Map.Entry keyValuePair = (Map.Entry)iterator.next();
-                String joinerStr = !iterator.hasNext() ? " %s='%s' " : " %s='%s';";
+                String joinerStr = !iterator.hasNext() ? " %s='%s' " : " %s='%s'";
                 joiner.add(String.format(joinerStr, keyValuePair.getKey(), keyValuePair.getValue().toString()));
                 iterator.remove();
             }

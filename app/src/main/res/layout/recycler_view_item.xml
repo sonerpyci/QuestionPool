@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"> <!--wrap content yapılacak -->
+
+
+  <TextView
+      android:id="@+id/question_text"
+      android:layout_width="262dp"
+      android:layout_height="114dp"
+      android:paddingLeft="30dp"
+      android:layout_marginTop="52dp"
+      android:textSize="15sp"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintTop_toTopOf="parent" />
+
+  <TextView
+      android:id="@+id/question_number"
+      android:layout_width="56dp"
+      android:layout_height="54dp"
+      android:text="1."
+      android:textSize="36sp"
+      android:textStyle="bold"
+      android:paddingLeft="30dp"
+      app:layout_constraintBottom_toBottomOf="parent"
+      app:layout_constraintHorizontal_bias="0.0"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintTop_toTopOf="parent"
+      app:layout_constraintVertical_bias="0.0" />
+
+  <FrameLayout
+      android:layout_width="146dp"
+      android:layout_height="114dp"
+      android:layout_marginTop="52dp"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:layout_constraintHorizontal_bias="0.0"
+      app:layout_constraintStart_toEndOf="@+id/question_text"
+      app:layout_constraintTop_toTopOf="parent">
+
+    <ImageView
+        android:id="@+id/ImageView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitCenter"
+        android:src="@drawable/user_anonymous"
+        android:visibility="visible" />
+
+    <VideoView
+        android:id="@+id/VideoView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="bottom|center"
+        android:padding="5dp"
+        android:visibility="gone" />
+
+  </FrameLayout>
+</android.support.constraint.ConstraintLayout>
