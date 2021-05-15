@@ -4,30 +4,34 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#2a475e"
     tools:context=".QuestionActivity">
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/question_recycler_view"
-        android:layout_width="409dp"
-        android:layout_height="537dp"
+        android:layout_width="0dp"
+        android:layout_height="570dp"
+        android:background="#171a21"
         android:orientation="vertical"
         app:layoutManager="LinearLayoutManager"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.453" />
+        app:layout_constraintVertical_bias="0.552" />
 
-    <Button
-        android:id="@+id/button"
+    <ImageButton
+        android:id="@+id/add_new_question_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="ActivityQuestion"
+        android:text="Add"
+        android:src="@android:drawable/ic_input_add"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.945" />
+        app:layout_constraintVertical_bias="0.976" />
 
     <android.support.constraint.ConstraintLayout
         android:layout_width="411dp"
@@ -53,8 +57,9 @@
             android:id="@+id/textView3"
             android:layout_width="314dp"
             android:layout_height="88dp"
-            android:background="#57c7c7"
+            android:background="#2a475e"
             android:gravity="center"
+            android:textColor="#e3e3e3"
             android:text="QUESTIONS"
             android:textAlignment="center"
             android:textAllCaps="false"

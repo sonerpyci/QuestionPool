@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="10dp"
+
+    android:background="#1b2838"> <!--wrap content yapılacak -->
+
+  <TextView
+      android:id="@+id/question_number"
+      android:layout_width="55dp"
+      android:layout_height="52dp"
+      android:paddingLeft="30dp"
+      android:text="1."
+      android:textAlignment="viewStart"
+      android:textSize="36sp"
+      android:textStyle="bold"
+      android:textColor="#e3e3e3"
+      app:layout_constraintBottom_toBottomOf="parent"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintTop_toTopOf="parent"
+      app:layout_constraintVertical_bias="0.0" />
+
+  <TextView
+      android:id="@+id/question_point"
+      android:layout_width="55dp"
+      android:layout_height="52dp"
+      android:text="(12 pts)"
+      android:textColor="#e3e3e3"
+      android:gravity="center"
+      android:textSize="12sp"
+      android:textStyle="italic"
+      app:layout_constraintStart_toEndOf="@+id/question_number"
+      app:layout_constraintTop_toTopOf="parent" />
+
+  <ImageButton
+      android:id="@+id/edit_question_btn"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginEnd="24dp"
+      android:background="@android:color/holo_orange_light"
+      android:src="@android:drawable/ic_menu_edit"
+      android:text="Edit"
+      app:layout_constraintEnd_toStartOf="@+id/delete_question_btn"
+      app:layout_constraintTop_toTopOf="parent" />
+
+  <ImageButton
+      android:id="@+id/delete_question_btn"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginEnd="24dp"
+      android:background="@android:color/holo_red_dark"
+      android:src="@android:drawable/ic_menu_delete"
+      android:text="Delete"
+      app:layout_constraintEnd_toEndOf="parent"
+      app:layout_constraintTop_toTopOf="parent" />
+
+  <TextView
+      android:id="@+id/question_text"
+      android:layout_width="250dp"
+      android:layout_height="115dp"
+      android:layout_marginTop="52dp"
+      android:paddingLeft="30dp"
+      android:textColor="#e3e3e3"
+      android:textSize="15sp"
+      app:layout_constraintEnd_toStartOf="@+id/edit_question_btn"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintTop_toTopOf="parent" />
+
+
+  <FrameLayout
+      android:layout_width="122dp"
+      android:layout_height="103dp"
+      android:layout_marginTop="52dp"
+      app:layout_constraintStart_toEndOf="@+id/question_text"
+      app:layout_constraintTop_toTopOf="parent">
+
+    <ImageView
+        android:id="@+id/ImageView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitCenter"
+        android:src="@android:drawable/ic_menu_gallery"
+        android:visibility="visible" />
+
+    <VideoView
+        android:id="@+id/VideoView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="bottom|center"
+        android:padding="5dp"
+        android:visibility="gone" />
+
+  </FrameLayout>
+
+
+</android.support.constraint.ConstraintLayout>

@@ -1,14 +1,22 @@
 package tr.edu.yildiz.payci.soner;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.support.design.widget.BaseTransientBottomBar;
 import android.support.v4.app.Fragment;
 import android.support.v4.view.ViewPager;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -34,9 +42,10 @@ public class ScreenSlideFragmentHolder extends Fragment {
     private int fragmentType;
     DbHelper dbHelper;
     RecyclerView rv;
+    ImageButton btnAddQuestion;
     RecyclerQuestionsAdapter adapter;
     ArrayList<Question> questions;
-
+    LayoutInflater inflater;
 
     public ScreenSlideFragmentHolder() {
         // Required empty public constructor
@@ -76,22 +85,23 @@ public class ScreenSlideFragmentHolder extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        int resId = R.layout.activity_exam;
+        this.inflater = inflater;
+        int resId = R.layout.activity_question;
         switch (fragmentType) {
             case 0:
-                resId = R.layout.activity_exam;
+                resId = R.layout.activity_question;
                 break;
             case 1:
-                resId = R.layout.activity_question;
+                resId = R.layout.activity_exam;
                 break;
             case 2:
-                resId = R.layout.activity_question;
+                resId = R.layout.activity_exam;
                 break;
         }
 
 
         View view = (ViewGroup)inflater.inflate(resId, container, false);
-        ((ViewPager) container).addView(view, 0);
+        //((ViewPager) container).addView(view, 0);
         return view;
         /*return (ViewGroup) inflater.inflate(
                 R.layout.fragment_screen_slide_page, container, false);*/
@@ -100,15 +110,21 @@ public class ScreenSlideFragmentHolder extends Fragment {
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        if (fragmentType > 0){
+        if (fragmentType == 0){
+            btnAddQuestion = (ImageButton) view.findViewById(R.id.add_new_question_btn);
+            btnAddQuestion.setOnClickListener((v -> {
+                createQuestionPopup(view);
+             }));
+
+
             rv = (RecyclerView) view.findViewById(R.id.question_recycler_view);
 
             questions = new ArrayList<Question>();
-            questions.add(new Question("Android"));
-            questions.add(new Question("Java"));
-            questions.add(new Question("Python"));
-            questions.add(new Question("MySQL"));
-            questions.add(new Question("PHP"));
+            questions.add(new Question("Gandalf Miğfer Dibi savaşından önce kaçıncı günden bahsetmektedir?"));
+            questions.add(new Question("Yukarıdaki soruda bahsi geçen an geldiğinde, hangi yöne bakılmalıdır?"));
+            questions.add(new Question("İlk soruda bahsi geçen gün içerisinde, ilgili yöne ne zaman bakılmalıdır?"));
+            questions.add(new Question("Babam böyle pasta yapmayı nerden öğrendi?"));
+            questions.add(new Question("Ödev nedir? Nasıl yapılmaz?"));
 
             rv.setItemAnimator(new DefaultItemAnimator());
             rv.setNestedScrollingEnabled(false);
@@ -123,10 +139,58 @@ public class ScreenSlideFragmentHolder extends Fragment {
                 }
 
             });
-
             rv.setAdapter(adapter);
         }
+    }
 
+    public void createQuestionPopup(View view) {
+        View popupView = inflater.inflate(R.layout.popup_add_edit_question, null);
+
+        // create the popup window
+        int width = LinearLayout.LayoutParams.WRAP_CONTENT;
+        int height = LinearLayout.LayoutParams.WRAP_CONTENT;
+        boolean focusable = true; // lets taps outside the popup also dismiss it
+        final PopupWindow popupWindow = new PopupWindow(popupView, width, height, focusable);
+        popupWindow.setOutsideTouchable(true);
+        // show the popup window
+        // which view you pass in doesn't matter, it is only used for the window tolken
+        popupWindow.showAtLocation(view, Gravity.CENTER, 0, 0);
+        view.setAlpha((float) 0.1);
+
+        popupWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
+            @Override
+            public void onDismiss() {
+                view.setAlpha((float) 1);
+            }
+        });
+        ImageButton btnPoupAddQuestion = popupView.findViewById(R.id.add_question_btn);
+
+        btnPoupAddQuestion.setOnClickListener((v2 -> {
+
+            // TODO : Create Question and Insert it to Db.
+
+
+
+        }));
+
+        // dismiss the popup window when touched
+        popupView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                view.setAlpha((float) 1);
+                popupWindow.dismiss();
+
+                return true;
+            }
+        });
 
     }
+
+
+
+    public void addNewQuestionOnClick() {
+
+    }
+
+
 }
