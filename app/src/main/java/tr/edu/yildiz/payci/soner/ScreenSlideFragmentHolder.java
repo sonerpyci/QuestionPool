@@ -33,6 +33,7 @@ import android.widget.PopupWindow;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
 
@@ -378,6 +379,11 @@ public class ScreenSlideFragmentHolder extends Fragment {
         } else {
             btnPopupAddQuestion.setVisibility(View.GONE);
             btnPopupEditQuestion.setVisibility(View.VISIBLE);
+
+            TextView questionPopupHeader = (TextView) popupView.findViewById(R.id.question_header);
+            questionPopupHeader.setText("Edit Question");
+
+
             EditText questionTextElement = (EditText) popupView.findViewById(R.id.question_text_input);
             EditText questionOptElement_A = (EditText) popupView.findViewById(R.id.question_A_content);
             EditText questionOptElement_B = (EditText) popupView.findViewById(R.id.question_B_content);
@@ -803,43 +809,14 @@ public class ScreenSlideFragmentHolder extends Fragment {
         Intent intent = new Intent(android.content.Intent.ACTION_SEND);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         intent.setType("text/plain");
-
         String folder = getContext().getFilesDir().getAbsolutePath();
-
-
-
-        //File file = new File(exam.getExamName()+".txt");
         File file = new File(folder + "/" + filename);
-
-        //Uri uri = Uri.parse(file.toString());
-
         Uri uri = FileProvider.getUriForFile(getContext(), getContext().getApplicationContext().getPackageName() + ".provider", file);
-
-
-
         Intent sharingIntent = new Intent(Intent.ACTION_SEND);
         sharingIntent.setType("text/*");
         sharingIntent.putExtra(Intent.EXTRA_STREAM, uri);
         startActivity(Intent.createChooser(sharingIntent, "share file with"));
     }
-
-
-    /*public void sendExamAsText(View view, Exam exam) {
-
-        Intent intent = new Intent(android.content.Intent.ACTION_SEND);
-
-
-
-
-        intent.setType("text/plain");
-
-        intent.putExtra(android.content.Intent.EXTRA_SUBJECT, getString(R.string.share_subject));
-        intent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);
-
-        //startActivity(Intent.createChooser(intent, getString(R.string.share_using)));
-    }*/
-
-
 
 
 }

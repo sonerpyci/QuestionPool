@@ -166,6 +166,9 @@ public class SignUpActivity extends AppCompatActivity {
 
         if (person.getId() != 0){
             Toast.makeText(SignUpActivity.this, "Signup successful!", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(SignUpActivity.this, ScreenSlideFragmentPage.class);
+            intent.putExtra("userId", person.getId());
+            this.startActivity(intent);
         }
 
     }
