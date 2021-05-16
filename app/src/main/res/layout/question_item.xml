@@ -12,10 +12,10 @@
       android:id="@+id/question_number"
       android:layout_width="55dp"
       android:layout_height="52dp"
-      android:paddingLeft="30dp"
+      android:paddingLeft="15dp"
       android:text="1."
       android:textAlignment="viewStart"
-      android:textSize="36sp"
+      android:textSize="24sp"
       android:textStyle="bold"
       android:textColor="#e3e3e3"
       app:layout_constraintBottom_toBottomOf="parent"
@@ -29,64 +29,51 @@
       android:layout_height="52dp"
       android:text="(12 pts)"
       android:textColor="#e3e3e3"
-      android:gravity="center"
+      android:gravity="left"
       android:textSize="12sp"
       android:textStyle="italic"
       app:layout_constraintStart_toEndOf="@+id/question_number"
       app:layout_constraintTop_toTopOf="parent" />
 
-  <ImageButton
-      android:id="@+id/edit_question_btn"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_marginEnd="24dp"
-      android:background="@android:color/holo_orange_light"
-      android:src="@android:drawable/ic_menu_edit"
-      android:text="Edit"
-      app:layout_constraintEnd_toStartOf="@+id/delete_question_btn"
-      app:layout_constraintTop_toTopOf="parent" />
-
-  <ImageButton
-      android:id="@+id/delete_question_btn"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_marginEnd="24dp"
-      android:background="@android:color/holo_red_dark"
-      android:src="@android:drawable/ic_menu_delete"
-      android:text="Delete"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:layout_constraintTop_toTopOf="parent" />
 
   <TextView
       android:id="@+id/question_text"
-      android:layout_width="250dp"
-      android:layout_height="115dp"
+      android:layout_width="229dp"
+      android:layout_height="114dp"
       android:layout_marginTop="52dp"
       android:paddingLeft="30dp"
       android:textColor="#e3e3e3"
       android:textSize="15sp"
-      app:layout_constraintEnd_toStartOf="@+id/edit_question_btn"
       app:layout_constraintStart_toStartOf="parent"
       app:layout_constraintTop_toTopOf="parent" />
-
 
   <FrameLayout
       android:layout_width="122dp"
       android:layout_height="103dp"
       android:layout_marginTop="52dp"
+      android:layout_marginEnd="10dp"
+      app:layout_constraintEnd_toEndOf="parent"
       app:layout_constraintStart_toEndOf="@+id/question_text"
       app:layout_constraintTop_toTopOf="parent">
 
     <ImageView
-        android:id="@+id/ImageView"
+        android:id="@+id/question_image_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="fitCenter"
         android:src="@android:drawable/ic_menu_gallery"
         android:visibility="visible" />
 
+    <ImageView
+        android:id="@+id/question_audio_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitCenter"
+        android:src="@android:drawable/ic_media_play"
+        android:visibility="gone" />
+
     <VideoView
-        android:id="@+id/VideoView"
+        android:id="@+id/question_video_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="bottom|center"

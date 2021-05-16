@@ -37,6 +37,8 @@ import tr.edu.yildiz.payci.soner.DAL.DbHelper;
 import tr.edu.yildiz.payci.soner.model.Person;
 import tr.edu.yildiz.payci.soner.model.UserBase;
 
+import static tr.edu.yildiz.payci.soner.helpers.IOStream.readAllBytes;
+
 public class SignUpActivity extends AppCompatActivity {
     final Integer PICK_PHOTO_FOR_AVATAR = 1;
     final Calendar myCalendar = Calendar.getInstance();
@@ -198,33 +200,4 @@ public class SignUpActivity extends AppCompatActivity {
             return false;
         }
     }
-
-
-    public static byte[] readAllBytes(InputStream inputStream) throws IOException {
-        final int bufLen = 4 * 0x400; // 4KB
-        byte[] buf = new byte[bufLen];
-        int readLen;
-        IOException exception = null;
-
-        try {
-            try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-                while ((readLen = inputStream.read(buf, 0, bufLen)) != -1)
-                    outputStream.write(buf, 0, readLen);
-
-                return outputStream.toByteArray();
-            }
-        } catch (IOException e) {
-            exception = e;
-            throw e;
-        } finally {
-            if (exception == null) inputStream.close();
-            else try {
-                inputStream.close();
-            } catch (IOException e) {
-                exception.addSuppressed(e);
-            }
-        }
-    }
-
-
 }

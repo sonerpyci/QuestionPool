@@ -1,6 +1,15 @@
 package tr.edu.yildiz.payci.soner;
 
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ContentResolver;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.BaseTransientBottomBar;
 import android.support.v4.app.Fragment;
@@ -8,23 +17,41 @@ import android.support.v4.view.ViewPager;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Base64;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.MimeTypeMap;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.Toast;
+import android.widget.VideoView;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
 import tr.edu.yildiz.payci.soner.DAL.DbHelper;
 import tr.edu.yildiz.payci.soner.helpers.OnItemClickListener;
 import tr.edu.yildiz.payci.soner.helpers.RecyclerQuestionsAdapter;
 import tr.edu.yildiz.payci.soner.model.Question;
+import tr.edu.yildiz.payci.soner.model.QuestionMedia;
+
+import static tr.edu.yildiz.payci.soner.helpers.IOStream.readAllBytes;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -34,22 +61,31 @@ import tr.edu.yildiz.payci.soner.model.Question;
 public class ScreenSlideFragmentHolder extends Fragment {
 
 
-    // TODO: Rename parameter arguments, choose names that match
+
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String FRAGMENT_TYPE = "fragmentType";
+    private static final String USER_ID = "userId";
+    private static final Integer PICK_CONTENT_FOR_QUESTION = 1;
 
-    // TODO: Rename and change types of parameters
+
     private int fragmentType;
+    private long userId;
     DbHelper dbHelper;
     RecyclerView rv;
     ImageButton btnAddQuestion;
     RecyclerQuestionsAdapter adapter;
     ArrayList<Question> questions;
     LayoutInflater inflater;
+    View popupView;
+    byte[] selectedContent = null;
+    Uri selectedMediaUri = null;
+    String selectedContentType = null;
+    boolean playingAudio = false;
+    private WeakReference<OnItemClickListener> questionListenerRef;
+    MediaPlayer mediaPlayer;
 
     public ScreenSlideFragmentHolder() {
         // Required empty public constructor
-        this.dbHelper = new DbHelper(getContext());
     }
 
     public void setFragmentType(int fragmentType) {
@@ -63,12 +99,13 @@ public class ScreenSlideFragmentHolder extends Fragment {
      * @param fragmentType Parameter 1.
      * @return A new instance of fragment ScreenSlideFragmentHolder.
      */
-    // TODO: Rename and change types and number of parameters
-    public static ScreenSlideFragmentHolder newInstance(int fragmentType) {
+
+    public static ScreenSlideFragmentHolder newInstance(int fragmentType, long userId) {
         ScreenSlideFragmentHolder fragment = new ScreenSlideFragmentHolder();
         fragment.setFragmentType(fragmentType);
         Bundle args = new Bundle();
         args.putInt(FRAGMENT_TYPE, fragmentType);
+        args.putLong(USER_ID, userId);
         fragment.setArguments(args);
         return fragment;
     }
@@ -78,6 +115,18 @@ public class ScreenSlideFragmentHolder extends Fragment {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             fragmentType = getArguments().getInt(FRAGMENT_TYPE);
+            userId = getArguments().getLong(USER_ID);
+            dbHelper = new DbHelper(getContext());
+            mediaPlayer = new MediaPlayer();
+            mediaPlayer.setLooping(false);
+
+
+            mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                @Override
+                public void onCompletion(MediaPlayer mp) {
+                    playingAudio = false;
+                }
+            });
         }
     }
 
@@ -113,18 +162,12 @@ public class ScreenSlideFragmentHolder extends Fragment {
         if (fragmentType == 0){
             btnAddQuestion = (ImageButton) view.findViewById(R.id.add_new_question_btn);
             btnAddQuestion.setOnClickListener((v -> {
-                createQuestionPopup(view);
-             }));
-
+                createQuestionPopup(view, null);
+            }));
 
             rv = (RecyclerView) view.findViewById(R.id.question_recycler_view);
 
-            questions = new ArrayList<Question>();
-            questions.add(new Question("Gandalf Miğfer Dibi savaşından önce kaçıncı günden bahsetmektedir?"));
-            questions.add(new Question("Yukarıdaki soruda bahsi geçen an geldiğinde, hangi yöne bakılmalıdır?"));
-            questions.add(new Question("İlk soruda bahsi geçen gün içerisinde, ilgili yöne ne zaman bakılmalıdır?"));
-            questions.add(new Question("Babam böyle pasta yapmayı nerden öğrendi?"));
-            questions.add(new Question("Ödev nedir? Nasıl yapılmaz?"));
+            questions = dbHelper.getQuestionsByUserId(userId);
 
             rv.setItemAnimator(new DefaultItemAnimator());
             rv.setNestedScrollingEnabled(false);
@@ -132,10 +175,54 @@ public class ScreenSlideFragmentHolder extends Fragment {
 
             adapter = new RecyclerQuestionsAdapter(questions, getContext(), new OnItemClickListener() {
 
-                // TODO : EDIT QUESTION
                 @Override
-                public void onQuestionItemClick(Question item) {
+                public void onQuestionItemClick(View v, Question item) {
                     Toast.makeText(getContext(), String.format( "Soru : %s ?", item.getText()), Toast.LENGTH_SHORT).show();
+                }
+                @Override
+                public boolean onQuestionItemLongClick(View v, Question item) {
+                    final AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
+                    builder.setTitle("Attention")
+                            .setMessage("Please select an operation to perform for the question " + item.getId())
+                            .setNeutralButton("Back", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+
+                                }
+                            })
+                            .setPositiveButton("Edit", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    createQuestionPopup(view, item);
+                                }
+                            }).setNegativeButton("Delete", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    // TODO : DELETE QUESTION
+                                    final AlertDialog.Builder builder2 = new AlertDialog.Builder(builder.getContext());
+                                    builder2.setTitle("Question Will Be Deleted")
+                                            .setMessage("Are you sure about that?")
+                                            .setNeutralButton("No", new DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(DialogInterface dialog, int which) {
+
+                                                }
+                                            }).setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(DialogInterface dialog, int which) {
+                                                    //TODO : DELETE QUESTION
+                                                    //deleteQuestion(item);
+                                                }
+                                            }).show();
+                                }
+                            });
+
+                    builder.create().show();
+                    //questionListenerRef.get().onQuestionItemLongClick(v, item);
+
+
+                    Toast.makeText(getContext(), String.format( "Soru uzun basıldı : %s ?", item.getText()), Toast.LENGTH_SHORT).show();
+                    return true;
                 }
 
             });
@@ -143,8 +230,9 @@ public class ScreenSlideFragmentHolder extends Fragment {
         }
     }
 
-    public void createQuestionPopup(View view) {
-        View popupView = inflater.inflate(R.layout.popup_add_edit_question, null);
+    @SuppressLint("NonConstantResourceId")
+    public void createQuestionPopup(View view, Question question) {
+        popupView = inflater.inflate(R.layout.popup_add_edit_question, null);
 
         // create the popup window
         int width = LinearLayout.LayoutParams.WRAP_CONTENT;
@@ -163,34 +251,342 @@ public class ScreenSlideFragmentHolder extends Fragment {
                 view.setAlpha((float) 1);
             }
         });
-        ImageButton btnPoupAddQuestion = popupView.findViewById(R.id.add_question_btn);
-
-        btnPoupAddQuestion.setOnClickListener((v2 -> {
-
-            // TODO : Create Question and Insert it to Db.
 
 
+        ImageButton btnPopupAddQuestion = popupView.findViewById(R.id.add_question_btn);
+        ImageButton btnPopupEditQuestion = popupView.findViewById(R.id.edit_question_btn);
+        FrameLayout frameQuestionContent = popupView.findViewById(R.id.question_content_holder);
 
-        }));
+        frameQuestionContent.setOnClickListener((v) -> {
+            Intent intent = new Intent();
+            intent.setType("image/* video/* audio/*");
+            intent.setAction(Intent.ACTION_GET_CONTENT);
+            startActivityForResult(
+                    Intent.createChooser(intent, "Complete action using"),
+                    PICK_CONTENT_FOR_QUESTION);
+        });
+
+        if (question == null) {
+            btnPopupEditQuestion.setVisibility(View.GONE);
+            btnPopupAddQuestion.setVisibility(View.VISIBLE);
+            btnPopupAddQuestion.setOnClickListener((v -> {
+                insertNewQuestionOnClick(popupView);
+                popupWindow.dismiss();
+            }));
+
+        } else {
+            btnPopupAddQuestion.setVisibility(View.GONE);
+            btnPopupEditQuestion.setVisibility(View.VISIBLE);
+            EditText questionTextElement = (EditText) popupView.findViewById(R.id.question_text_input);
+            EditText questionOptElement_A = (EditText) popupView.findViewById(R.id.question_A_content);
+            EditText questionOptElement_B = (EditText) popupView.findViewById(R.id.question_B_content);
+            EditText questionOptElement_C = (EditText) popupView.findViewById(R.id.question_C_content);
+            EditText questionOptElement_D = (EditText) popupView.findViewById(R.id.question_D_content);
+            EditText questionOptElement_E = (EditText) popupView.findViewById(R.id.question_E_content);
+
+            questionTextElement.setText(question.getText());
+            questionOptElement_A.setText(question.getA());
+            questionOptElement_B.setText(question.getB());
+            questionOptElement_C.setText(question.getC());
+            questionOptElement_D.setText(question.getD());
+            questionOptElement_E.setText(question.getE());
+
+
+            RadioGroup radioGroup = (RadioGroup) popupView.findViewById(R.id.radioGroup);
+
+            switch (question.getCorrectAnswer()) {
+                case "A":
+                    radioGroup.check(R.id.question_radio_A);
+                    break;
+                case "B":
+                    radioGroup.check(R.id.question_radio_B);
+                    break;
+                case "C":
+                    radioGroup.check(R.id.question_radio_C);
+                    break;
+                case "D":
+                    radioGroup.check(R.id.question_radio_D);
+                    break;
+                case "E":
+                    radioGroup.check(R.id.question_radio_E);
+                    break;
+            }
+
+            if (question.getQuestionMedia() != null) {
+                byte[] content = question.getQuestionMedia().getContent();
+                String contentType = question.getQuestionMedia().getContentType();
+                if (contentType.contains("image")) {
+                    //handle image
+                    Bitmap bmp = BitmapFactory.decodeByteArray(content, 0, content.length);
+                    ImageView image = (ImageView) popupView.findViewById(R.id.question_content_imageBox);
+                    image.setImageBitmap(Bitmap.createScaledBitmap(bmp, image.getWidth(), image.getHeight(), false));
+                    VideoView video = (VideoView) popupView.findViewById(R.id.question_content_videoBox);
+                    ImageView audio = (ImageView) popupView.findViewById(R.id.question_content_audioBox);
+                    image.setVisibility(View.VISIBLE);
+                    video.setVisibility(View.GONE);
+                    audio.setVisibility(View.GONE);
+
+                } else  if (contentType.contains("video")) {
+                    //handle video for edit
+                } else  if (contentType.contains("audio")) {
+                    //handle audio
+
+                    ImageView audioBox = (ImageView) popupView.findViewById(R.id.question_content_audioBox);
+                    ImageView image = (ImageView) popupView.findViewById(R.id.question_content_imageBox);
+                    VideoView video = (VideoView) popupView.findViewById(R.id.question_content_videoBox);
+                    image.setVisibility(View.GONE);
+                    video.setVisibility(View.GONE);
+                    audioBox.setVisibility(View.VISIBLE);
+                }
+            }
+            btnPopupEditQuestion.setOnClickListener((v -> {
+                rv.stopScroll();
+                editQuestionOnClick(popupView, question);
+                popupWindow.dismiss();
+            }));
+
+
+        }
+
+
+
 
         // dismiss the popup window when touched
         popupView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                view.setAlpha((float) 1);
                 popupWindow.dismiss();
-
                 return true;
             }
         });
 
     }
 
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        selectedContent = null;
+        selectedMediaUri = null;
+        selectedContentType = null;
+        if (requestCode == PICK_CONTENT_FOR_QUESTION && resultCode == Activity.RESULT_OK) {
+            selectedMediaUri = data.getData();
+            selectedContentType = getMimeType(selectedMediaUri);
+            if (selectedContentType.contains("image")) {
+                //handle image
+                if (data == null) {
+                    Toast.makeText(getActivity(), "Cannot read specified file.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                try {
+                    InputStream inputStream = getActivity().getContentResolver().openInputStream(data.getData());
+                    selectedContent = readAllBytes(inputStream);
+
+                    Bitmap bmp = BitmapFactory.decodeByteArray(selectedContent, 0, selectedContent.length);
+                    ImageView image = (ImageView) popupView.findViewById(R.id.question_content_imageBox);
+                    image.setImageBitmap(Bitmap.createScaledBitmap(bmp, image.getWidth(), image.getHeight(), false));
+                    VideoView video = (VideoView) popupView.findViewById(R.id.question_content_videoBox);
+                    ImageView audio = (ImageView) popupView.findViewById(R.id.question_content_audioBox);
+                    video.setVisibility(View.GONE);
+                    audio.setVisibility(View.GONE);
+                } catch (IOException e) {
+                    Toast.makeText(getActivity(), "System cannot find specified file.", Toast.LENGTH_SHORT).show();
+                }
+
+            } else  if (selectedContentType.contains("video")) {
+                //handle video
+            } else  if (selectedContentType.contains("audio")) {
+                //handle audio
+
+                try {
+                    InputStream inputStream = getActivity().getContentResolver().openInputStream(data.getData());
+                    selectedContent = readAllBytes(inputStream);
+                    ImageView audioBox = (ImageView) popupView.findViewById(R.id.question_content_audioBox);
+
+                    ImageView image = (ImageView) popupView.findViewById(R.id.question_content_imageBox);
+                    VideoView video = (VideoView) popupView.findViewById(R.id.question_content_videoBox);
+                    image.setVisibility(View.GONE);
+                    video.setVisibility(View.GONE);
+                    audioBox.setVisibility(View.VISIBLE);
+                    /*audioBox.setOnClickListener((v -> {
+                        playMp3(selectedContent);
+                    }));*/
+                    FrameLayout frameQuestionContent = popupView.findViewById(R.id.question_content_holder);
+                    frameQuestionContent.setOnClickListener((v) -> {
+                        playMp3(selectedContent);
+                    });
+                } catch (IOException e) {
+                    Toast.makeText(getActivity(), "System cannot find specified file.", Toast.LENGTH_SHORT).show();
+                }
 
 
-    public void addNewQuestionOnClick() {
 
+            }
+        }
     }
 
+    public String getMimeType(Uri uri)
+    {
+        ContentResolver cr = getActivity().getContentResolver();
+        return cr.getType(uri);
+    }
 
+    public void PlayAudio(String base64EncodedString){
+        try
+        {
+            String url = "data:audio/mp3;base64,"+base64EncodedString;
+            MediaPlayer mediaPlayer = new MediaPlayer();
+            mediaPlayer.setDataSource(url);
+            mediaPlayer.prepare();
+            mediaPlayer.start();
+        }
+        catch(Exception ex){
+            System.out.print(ex.getMessage());
+        }
+    }
+
+    private void playMp3(byte[] mp3SoundByteArray)
+    {
+        try
+        {
+            if(mediaPlayer!=null) {
+                if(mediaPlayer.isPlaying())
+                    mediaPlayer.stop();
+                mediaPlayer.reset();
+                mediaPlayer.release();
+                mediaPlayer = null;
+                mediaPlayer = new MediaPlayer();
+                playingAudio = true;
+                //InputStream targetStream = new ByteArrayInputStream(mp3SoundByteArray);
+                String base64EncodedString = Base64.encodeToString(mp3SoundByteArray, 0);
+                String url = "data:audio/mp3;base64,"+base64EncodedString;
+                mediaPlayer.setDataSource(url);
+                mediaPlayer.prepare();
+                mediaPlayer.start();
+                super.onResume();
+            }
+         }
+        catch (IOException ex)
+        {
+            String s = ex.toString();
+            ex.printStackTrace();
+        }
+    }
+
+    public void insertNewQuestionOnClick(View popupView) {
+        EditText questionTextElement = (EditText) popupView.findViewById(R.id.question_text_input);
+        EditText questionOptElement_A = (EditText) popupView.findViewById(R.id.question_A_content);
+        EditText questionOptElement_B = (EditText) popupView.findViewById(R.id.question_B_content);
+        EditText questionOptElement_C = (EditText) popupView.findViewById(R.id.question_C_content);
+        EditText questionOptElement_D = (EditText) popupView.findViewById(R.id.question_D_content);
+        EditText questionOptElement_E = (EditText) popupView.findViewById(R.id.question_E_content);
+        String questionText = questionTextElement.getText().toString().trim();
+        String questionOpt_A = questionOptElement_A.getText().toString().trim();
+        String questionOpt_B = questionOptElement_B.getText().toString().trim();
+        String questionOpt_C = questionOptElement_C.getText().toString().trim();
+        String questionOpt_D = questionOptElement_D.getText().toString().trim();
+        String questionOpt_E = questionOptElement_E.getText().toString().trim();
+        String correctAnswer = "";
+
+        QuestionMedia questionMedia = null;
+        if (selectedContent != null) {
+            questionMedia = new QuestionMedia(0, 0, selectedContentType, selectedContent);
+        }
+
+        RadioGroup radioGroup = (RadioGroup) popupView.findViewById(R.id.radioGroup);
+        int selectedId = radioGroup.getCheckedRadioButtonId();
+        RadioButton radioButton = (RadioButton) popupView.findViewById(selectedId);
+
+        switch (radioButton.getId()) {
+            case R.id.question_radio_A:
+                correctAnswer = "A";
+                break;
+            case R.id.question_radio_B:
+                correctAnswer = "B";
+                break;
+
+            case R.id.question_radio_C:
+                correctAnswer = "C";
+                break;
+
+            case R.id.question_radio_D:
+                correctAnswer = "D";
+                break;
+
+            case R.id.question_radio_E:
+                correctAnswer = "E";
+                break;
+        }
+
+        Question question = new Question(0, userId, questionText, questionOpt_A, questionOpt_B, questionOpt_C, questionOpt_D, questionOpt_E, correctAnswer, questionMedia);
+        question = dbHelper.insertQuestion(question);
+
+        adapter.addItem(question);
+
+        if (question.getId() != 0){
+            Toast.makeText(getContext(), String.format("Question successfully saved."), Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(getContext(), String.format("Error on Saving Question."), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public void editQuestionOnClick(View popupView, Question question) {
+
+        EditText questionTextElement = (EditText) popupView.findViewById(R.id.question_text_input);
+        EditText questionOptElement_A = (EditText) popupView.findViewById(R.id.question_A_content);
+        EditText questionOptElement_B = (EditText) popupView.findViewById(R.id.question_B_content);
+        EditText questionOptElement_C = (EditText) popupView.findViewById(R.id.question_C_content);
+        EditText questionOptElement_D = (EditText) popupView.findViewById(R.id.question_D_content);
+        EditText questionOptElement_E = (EditText) popupView.findViewById(R.id.question_E_content);
+
+
+        String questionText = questionTextElement.getText().toString().trim();
+        String questionOpt_A = questionOptElement_A.getText().toString().trim();
+        String questionOpt_B = questionOptElement_B.getText().toString().trim();
+        String questionOpt_C = questionOptElement_C.getText().toString().trim();
+        String questionOpt_D = questionOptElement_D.getText().toString().trim();
+        String questionOpt_E = questionOptElement_E.getText().toString().trim();
+        String correctAnswer = "";
+
+        QuestionMedia questionMedia = null;
+        if (selectedContent != null) {
+            questionMedia = new QuestionMedia(0, 0, selectedContentType, selectedContent);
+        } else {
+            questionMedia = question.getQuestionMedia();
+        }
+
+        RadioGroup radioGroup = (RadioGroup) popupView.findViewById(R.id.radioGroup);
+        int selectedId = radioGroup.getCheckedRadioButtonId();
+        RadioButton radioButton = (RadioButton) popupView.findViewById(selectedId);
+
+        switch (radioButton.getId()) {
+            case R.id.question_radio_A:
+                correctAnswer = "A";
+                break;
+            case R.id.question_radio_B:
+                correctAnswer = "B";
+                break;
+
+            case R.id.question_radio_C:
+                correctAnswer = "C";
+                break;
+
+            case R.id.question_radio_D:
+                correctAnswer = "D";
+                break;
+
+            case R.id.question_radio_E:
+                correctAnswer = "E";
+                break;
+        }
+
+        Question editedQuestion = new Question(question.getId(), question.getUserId(), questionText, questionOpt_A, questionOpt_B, questionOpt_C, questionOpt_D, questionOpt_E, correctAnswer, questionMedia);
+        editedQuestion = dbHelper.editQuestion(question, editedQuestion);
+
+        adapter.editItem(question, editedQuestion);
+
+        if (question.getId() != 0){
+            Toast.makeText(getContext(), String.format("Question successfully saved."), Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(getContext(), String.format("Error on Saving Question."), Toast.LENGTH_SHORT).show();
+        }
+    }
 }

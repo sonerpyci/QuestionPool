@@ -12,6 +12,7 @@ public class Question {
     private String d;
     private String e;
     private String correctAnswer;
+    private QuestionMedia questionMedia;
 
     public Question(long id, long userId, String text, String a, String b, String c, String d, String e, String correctAnswer) {
         this.id = id;
@@ -23,6 +24,19 @@ public class Question {
         this.d = d;
         this.e = e;
         this.correctAnswer = correctAnswer;
+    }
+
+    public Question(long id, long userId, String text, String a, String b, String c, String d, String e, String correctAnswer, QuestionMedia questionMedia) {
+        this.id = id;
+        this.userId = userId;
+        this.text = text;
+        this.a = a;
+        this.b = b;
+        this.c = c;
+        this.d = d;
+        this.e = e;
+        this.correctAnswer = correctAnswer;
+        this.questionMedia = questionMedia;
     }
 
 
@@ -103,4 +117,11 @@ public class Question {
         this.correctAnswer = correctAnswer;
     }
 
+    public QuestionMedia getQuestionMedia() {
+        return questionMedia;
+    }
+
+    public void setQuestionMedia(QuestionMedia questionMedia) {
+        this.questionMedia = questionMedia;
+    }
 }

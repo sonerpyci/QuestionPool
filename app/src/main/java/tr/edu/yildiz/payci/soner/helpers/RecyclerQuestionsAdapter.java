@@ -1,13 +1,17 @@
 package tr.edu.yildiz.payci.soner.helpers;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.VideoView;
 
+import java.lang.ref.WeakReference;
 import java.util.List;
 
 import tr.edu.yildiz.payci.soner.R;
@@ -36,9 +40,32 @@ public class RecyclerQuestionsAdapter extends RecyclerView.Adapter<RecyclerQuest
 
     @Override
     public void onBindViewHolder(final MyViewHolder holder, final int position) {
-        holder.question_text.setText(mListenerList.get(position).getText());
-        holder.question_number.setText(String.valueOf(position));
+        Question question = mListenerList.get(position);
+
         // get a get b get c get question fields.
+        holder.question_number.setText(String.valueOf(question.getId()));
+        holder.question_text.setText(question.getText());
+
+        if (question.getQuestionMedia() != null) {
+            if (question.getQuestionMedia().getContentType().contains("image")) {
+                Bitmap bmp = BitmapFactory.decodeByteArray(question.getQuestionMedia().getContent(), 0, question.getQuestionMedia().getContent().length);
+                holder.question_image_content.setImageBitmap(null);
+                holder.question_image_content.setImageBitmap(Bitmap.createScaledBitmap(bmp, holder.question_image_content.getWidth(), holder.question_image_content.getHeight(), false));
+                holder.question_video_content.setVisibility(View.GONE);
+                holder.question_audio_content.setVisibility(View.GONE);
+                holder.question_image_content.setVisibility(View.VISIBLE);
+
+            } else if (question.getQuestionMedia().getContentType().contains("video")) {
+                // TODO : Process Video Here
+            } else if (question.getQuestionMedia().getContentType().contains("audio")) {
+                holder.audioBytes = question.getQuestionMedia().getContent();
+                holder.question_video_content.setVisibility(View.GONE);
+                holder.question_image_content.setVisibility(View.GONE);
+                holder.question_audio_content.setVisibility(View.VISIBLE);
+            }
+        } else {
+            holder.question_image_content.setImageBitmap(null);
+        }
 
         holder.bind(mListenerList.get(position), listener);
     }
@@ -48,27 +75,55 @@ public class RecyclerQuestionsAdapter extends RecyclerView.Adapter<RecyclerQuest
         return mListenerList.size();
     }
 
-    @Override
-    public void onQuestionItemClick(Question item) {
+    public void addItem(Question item) {
+        this.mListenerList.add(item);
+        this.notifyItemRangeInserted(getItemCount() - 1, getItemCount());
+    }
+    public void editItem(Question oldItem, Question newItem) {
+        int index = mListenerList.indexOf(oldItem);
+        this.mListenerList.set(index, newItem);
+        this.notifyItemChanged(index);
+    }
 
+    @Override
+    public void onQuestionItemClick(View v, Question item) {
+
+    }
+
+    @Override
+    public boolean onQuestionItemLongClick(View v, Question item) {
+        return true;
     }
 
     public class MyViewHolder extends RecyclerView.ViewHolder {
         TextView question_text;
         TextView question_number;
-        ImageView im_image;
+        ImageView question_image_content;
+        ImageView question_audio_content;
+        byte[] audioBytes;
+        VideoView question_video_content;
+        private WeakReference<OnItemClickListener> listenerRef;
 
         public MyViewHolder(View view) {
             super(view);
+            listenerRef = new WeakReference<>(listener);
             question_text = (TextView) view.findViewById(R.id.question_text);
             question_number = (TextView) view.findViewById(R.id.question_number);
+            question_image_content = (ImageView) view.findViewById(R.id.question_image_view);
+            question_video_content = (VideoView) view.findViewById(R.id.question_video_view);
+            question_audio_content = (ImageView) view.findViewById(R.id.question_audio_view);
         }
 
         public void bind(final Question item, final OnItemClickListener listener) {
-
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) {
-                    listener.onQuestionItemClick(item);
+                    listener.onQuestionItemClick(v, item);
+                }
+            });
+            itemView.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    return listener.onQuestionItemLongClick(v, item);
                 }
             });
         }

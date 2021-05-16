@@ -20,8 +20,7 @@ import tr.edu.yildiz.payci.soner.helpers.ZoomOutPageTransformer;
 
 public class ScreenSlideFragmentPage extends FragmentActivity {
 
-    private String username;
-    private RecyclerQuestionsAdapter questionsAdapter;
+    private long userId;
 
     /**
      * The number of pages (wizard steps) to show in this demo.
@@ -43,7 +42,7 @@ public class ScreenSlideFragmentPage extends FragmentActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_screen_slide);
-        username = getIntent().getStringExtra("username");
+        userId = getIntent().getLongExtra("userId", -1);
         // Instantiate a ViewPager and a PagerAdapter.
         mPager = (ViewPager) findViewById(R.id.pager);
         mPager.setPageTransformer(true, new ZoomOutPageTransformer());
@@ -73,7 +72,7 @@ public class ScreenSlideFragmentPage extends FragmentActivity {
 
         @Override
         public Fragment getItem(int position) {
-            return ScreenSlideFragmentHolder.newInstance(position);
+            return ScreenSlideFragmentHolder.newInstance(position, userId);
         }
 
         @Override

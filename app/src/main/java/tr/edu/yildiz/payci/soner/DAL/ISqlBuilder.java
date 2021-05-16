@@ -11,7 +11,11 @@ public interface ISqlBuilder {
 
     public String BuildDeleteTableCommand();
 
+    public String BuildSelectQuestionsCommand();
+
     public String BuildSelectCommand(String tableName, ArrayList<String> selectColumns, HashMap<String, String> whereParams);
+
+    public String BuildSelectCommand(String tableName, ArrayList<String> selectColumns, HashMap<String, String> whereParams, HashMap<String, String> joinParams);
 
     public String BuildInsertCommand(String tableName, ArrayList<String> insertSpec);
 

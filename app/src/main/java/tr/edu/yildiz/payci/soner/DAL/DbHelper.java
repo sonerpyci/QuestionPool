@@ -1,5 +1,6 @@
 package tr.edu.yildiz.payci.soner.DAL;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -16,6 +17,8 @@ import java.util.List;
 import java.util.Locale;
 
 import tr.edu.yildiz.payci.soner.model.Person;
+import tr.edu.yildiz.payci.soner.model.Question;
+import tr.edu.yildiz.payci.soner.model.QuestionMedia;
 
 public class DbHelper extends SQLiteOpenHelper {
 
@@ -96,26 +99,6 @@ public class DbHelper extends SQLiteOpenHelper {
     // If a database already exists on disk with the same DATABASE_NAME, this method will NOT be called.
     @Override
     public void onCreate(SQLiteDatabase db) {
-        /*String CREATE_POSTS_TABLE = "CREATE TABLE " + TABLE_POSTS +
-                "(" +
-                KEY_POST_ID + " INTEGER PRIMARY KEY," + // Define a primary key
-                KEY_POST_USER_ID_FK + " INTEGER REFERENCES " + TABLE_USERS + "," + // Define a foreign key
-                KEY_POST_TEXT + " TEXT" +
-                ")";*/
-
-        /*String CREATE_USERS_TABLE = "CREATE TABLE " + TABLE_USERS +
-            "(" +
-                KEY_USER_ID + " INTEGER PRIMARY KEY," +
-                KEY_FIRST_NAME + " TEXT," +
-                KEY_LAST_NAME + " TEXT," +
-                KEY_USERNAME + " TEXT," +
-                KEY_PASSWORD + " TEXT," +
-                KEY_AVATAR + " TEXT," +
-                KEY_EMAIL + " TEXT," +
-                KEY_PHONE + " TEXT," +
-                KEY_DATE_OF_BIRTH + " TEXT" +
-            ")";*/
-
         HashMap<String, String> createUserTableHashMap = new HashMap<String, String>() {{
             put(KEY_USER_ID, "INTEGER PRIMARY KEY");
             put(KEY_FIRST_NAME, "TEXT");
@@ -235,11 +218,66 @@ public class DbHelper extends SQLiteOpenHelper {
         }
     }
 
+    public ArrayList<Question> getQuestionsByUserId(long userId) {
+        ArrayList<Question> questions = new ArrayList<Question>();
+
+        try {
+            ArrayList<String> selectColumns = new ArrayList<String>() {{ add("*"); }};
+
+            /*HashMap<String, String> joinParams = new HashMap<String, String>() {{
+                put(TABLE_QUESTION_MEDIAS + " QM ", "QM."+KEY_QUESTION_MEDIA_QUESTIONS_FK);
+            }};
+
+            HashMap<String, String> whereParams = new HashMap<String, String>() {{
+                put(KEY_QUESTION_USER_FK, String.valueOf(userId));
+            }};*/
+
+            SQLiteDatabase db = this.getReadableDatabase();
+            String sql = String.format(_sqlBuilder.BuildSelectQuestionsCommand(), userId);
+
+
+            Cursor c = db.rawQuery(sql, null);
+
+            if (c.moveToFirst()){
+                do {
+                    String questionOpt_A = c.getString(0);
+                    String questionOpt_B = c.getString(1);
+                    String questionOpt_C = c.getString(2);
+                    String questionOpt_D = c.getString(3);
+                    String questionOpt_E = c.getString(4);
+                    long questionId = c.getLong(5);
+                    String questionText = c.getString(6);
+                    String correctAnswer = c.getString(7);
+
+
+                    Question question;
+                    if(!c.isNull(c.getColumnIndex("contentType"))) {
+                        long mediaId = c.getLong(10);
+                        String mediaContentType = c.getString(11);
+                        byte[] mediaContent = c.getBlob(12);
+                        QuestionMedia questionMedia = new QuestionMedia(mediaId, questionId, mediaContentType, mediaContent);
+                        question = new Question(questionId, userId, questionText, questionOpt_A, questionOpt_B, questionOpt_C, questionOpt_D, questionOpt_E, correctAnswer, questionMedia);
+                    } else {
+                        question = new Question(questionId, userId, questionText, questionOpt_A, questionOpt_B, questionOpt_C, questionOpt_D, questionOpt_E, correctAnswer);
+                    }
+
+                    questions.add(question);
+                } while(c.moveToNext());
+            }
+            c.close();
+
+            return questions;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return questions;
+        }
+    }
+
     public Person insertUser(Person person) {
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.US);
 
-            ArrayList<String> createUserTableHashMap = new ArrayList<String>() {{
+            ArrayList<String> insertUserKeys = new ArrayList<String>() {{
                 add(KEY_FIRST_NAME);
                 add(KEY_LAST_NAME);
                 add(KEY_USERNAME);
@@ -250,7 +288,7 @@ public class DbHelper extends SQLiteOpenHelper {
                 add(KEY_AVATAR);
             }};
 
-            String insertUserSql = _sqlBuilder.BuildInsertCommand(TABLE_USERS, createUserTableHashMap);
+            String insertUserSql = _sqlBuilder.BuildInsertCommand(TABLE_USERS, insertUserKeys);
 
             SQLiteDatabase db = this.getWritableDatabase();
             db.beginTransaction();
@@ -279,6 +317,185 @@ public class DbHelper extends SQLiteOpenHelper {
             return person;
         }
     }
+
+    public Question insertQuestion(Question question) {
+        try {
+            ArrayList<String> insertQuestionKeys = new ArrayList<String>() {{
+                add(KEY_QUESTION_USER_FK);
+                add(KEY_QUESTION_TEXT);
+                add(KEY_QUESTION_A);
+                add(KEY_QUESTION_B);
+                add(KEY_QUESTION_C);
+                add(KEY_QUESTION_D);
+                add(KEY_QUESTION_E);
+                add(KEY_QUESTION_CORRECT_ANSWER);
+            }};
+
+            String insertQuestionSql = _sqlBuilder.BuildInsertCommand(TABLE_QUESTIONS, insertQuestionKeys);
+
+            SQLiteDatabase db = this.getWritableDatabase();
+            db.beginTransaction();
+            SQLiteStatement insertquestionsStmt = db.compileStatement(insertQuestionSql);
+
+            insertquestionsStmt.clearBindings();
+
+            insertquestionsStmt.bindLong(1, question.getUserId());
+            insertquestionsStmt.bindString(2, question.getText());
+            insertquestionsStmt.bindString(3, question.getA());
+            insertquestionsStmt.bindString(4, question.getB());
+            insertquestionsStmt.bindString(5, question.getC());
+            insertquestionsStmt.bindString(6, question.getD());
+            insertquestionsStmt.bindString(7, question.getE());
+            insertquestionsStmt.bindString(8, question.getCorrectAnswer());
+
+            long questionId = insertquestionsStmt.executeInsert();
+            db.setTransactionSuccessful();
+            db.endTransaction();
+
+            question.setId(questionId);
+
+            if (question.getQuestionMedia() != null) {
+                ArrayList<String> insertQuestionMediaKeys = new ArrayList<String>() {{
+                    add(KEY_QUESTION_MEDIA_QUESTIONS_FK);
+                    add(KEY_QUESTION_MEDIA_TYPE);
+                    add(KEY_QUESTION_MEDIA_CONTENT);
+                }};
+                String insertQuestionMediaSql = _sqlBuilder.BuildInsertCommand(TABLE_QUESTION_MEDIAS, insertQuestionMediaKeys);
+                db.beginTransaction();
+                SQLiteStatement insertquestionMediasStmt = db.compileStatement(insertQuestionMediaSql);
+
+                insertquestionMediasStmt.clearBindings();
+
+                insertquestionMediasStmt.bindLong(1, question.getId());
+                insertquestionMediasStmt.bindString(2, question.getQuestionMedia().getContentType());
+                insertquestionMediasStmt.bindBlob(3, question.getQuestionMedia().getContent());
+
+                long questionMediaId = insertquestionMediasStmt.executeInsert();
+                db.setTransactionSuccessful();
+                db.endTransaction();
+                question.getQuestionMedia().setId(questionMediaId);
+                question.getQuestionMedia().setQuestionId(question.getId());
+
+            }
+            return question;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return question;
+        }
+    }
+
+    public Question editQuestion(Question oldQuestion, Question newQuestion) {
+        try {
+            /*ArrayList<String> editQuestionKeys = new ArrayList<String>() {{
+                add(KEY_QUESTION_USER_FK);
+                add(KEY_QUESTION_TEXT);
+                add(KEY_QUESTION_A);
+                add(KEY_QUESTION_B);
+                add(KEY_QUESTION_C);
+                add(KEY_QUESTION_D);
+                add(KEY_QUESTION_E);
+                add(KEY_QUESTION_CORRECT_ANSWER);
+            }};*/
+
+            SQLiteDatabase db = this.getWritableDatabase();
+
+            if (oldQuestion.getQuestionMedia() != null && newQuestion.getQuestionMedia() == null) {
+                // Delete old media.
+                db.beginTransaction();
+                String sql = String.format("DELETE FROM " + TABLE_QUESTION_MEDIAS + " WHERE id=%d;", oldQuestion.getQuestionMedia().getId());
+                Cursor c = db.rawQuery(sql, null);
+                db.setTransactionSuccessful();
+                db.endTransaction();
+
+            }
+
+            if (oldQuestion.getQuestionMedia() == null && newQuestion.getQuestionMedia() != null) {
+                // Add new media.
+                ArrayList<String> insertQuestionMediaKeys = new ArrayList<String>() {{
+                    add(KEY_QUESTION_MEDIA_QUESTIONS_FK);
+                    add(KEY_QUESTION_MEDIA_TYPE);
+                    add(KEY_QUESTION_MEDIA_CONTENT);
+                }};
+                String insertQuestionMediaSql = _sqlBuilder.BuildInsertCommand(TABLE_QUESTION_MEDIAS, insertQuestionMediaKeys);
+                db.beginTransaction();
+                SQLiteStatement insertquestionMediasStmt = db.compileStatement(insertQuestionMediaSql);
+
+                insertquestionMediasStmt.clearBindings();
+
+                insertquestionMediasStmt.bindLong(1, newQuestion.getId());
+                insertquestionMediasStmt.bindString(2, newQuestion.getQuestionMedia().getContentType());
+                insertquestionMediasStmt.bindBlob(3, newQuestion.getQuestionMedia().getContent());
+
+                long questionMediaId = insertquestionMediasStmt.executeInsert();
+                db.setTransactionSuccessful();
+                db.endTransaction();
+                newQuestion.getQuestionMedia().setId(questionMediaId);
+                newQuestion.getQuestionMedia().setQuestionId(newQuestion.getId());
+            }
+
+            if (oldQuestion.getQuestionMedia() != null && newQuestion.getQuestionMedia() != null) {
+                if (oldQuestion.getQuestionMedia().getContent() != newQuestion.getQuestionMedia().getContent()) {
+                    // content changed. update it.
+                    db.beginTransaction();
+
+                    String updateQuestionMediaSql = "UPDATE QuestionMedias SET "
+                            + KEY_QUESTION_MEDIA_TYPE + " = ?, "
+                            + KEY_QUESTION_MEDIA_CONTENT + " = ? "
+                            + "WHERE id = ?";
+
+                    SQLiteStatement updateQuestionMediaStmt = db.compileStatement(updateQuestionMediaSql);
+                    updateQuestionMediaStmt.clearBindings();
+
+                    updateQuestionMediaStmt.bindString(1, newQuestion.getQuestionMedia().getContentType());
+                    updateQuestionMediaStmt.bindBlob(2, newQuestion.getQuestionMedia().getContent());
+                    updateQuestionMediaStmt.bindLong(3, oldQuestion.getQuestionMedia().getId());
+
+
+                    long rowCount = updateQuestionMediaStmt.executeUpdateDelete();
+
+                    db.setTransactionSuccessful();
+                    db.endTransaction();
+                }
+            }
+
+
+            db.beginTransaction();
+
+            String updateQuestionSql = "UPDATE Questions SET "
+                    + KEY_QUESTION_TEXT + " = ?, "
+                    + KEY_QUESTION_A + " = ?, "
+                    + KEY_QUESTION_B + " = ?, "
+                    + KEY_QUESTION_C + " = ?, "
+                    + KEY_QUESTION_D + " = ?, "
+                    + KEY_QUESTION_E + " = ?, "
+                    + KEY_QUESTION_CORRECT_ANSWER + " = ? "
+                    + "WHERE id = ?";
+
+
+            SQLiteStatement editQuestionStmt = db.compileStatement(updateQuestionSql);
+
+            editQuestionStmt.clearBindings();
+
+            editQuestionStmt.bindString(1, newQuestion.getText());
+            editQuestionStmt.bindString(2, newQuestion.getA());
+            editQuestionStmt.bindString(3, newQuestion.getB());
+            editQuestionStmt.bindString(4, newQuestion.getC());
+            editQuestionStmt.bindString(5, newQuestion.getD());
+            editQuestionStmt.bindString(6, newQuestion.getE());
+            editQuestionStmt.bindString(7, newQuestion.getCorrectAnswer());
+            editQuestionStmt.bindLong(8, newQuestion.getId());
+
+            long rowCount = editQuestionStmt.executeUpdateDelete();
+            db.setTransactionSuccessful();
+            db.endTransaction();
+
+            return newQuestion;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return oldQuestion;
+        }
+    }
+
 
     public boolean saveBytes(byte[] bytes, int id){
 
@@ -370,10 +587,10 @@ public class DbHelper extends SQLiteOpenHelper {
         }
     }
 
-    public boolean checkUsernameAndPassword(String username, String password) {
+    public long checkUsernameAndPassword(String username, String password) {
         List<Person> users = new ArrayList<Person>();
         try {
-            ArrayList<String> selectColumns = new ArrayList<String>() {{ add("*"); }};
+            ArrayList<String> selectColumns = new ArrayList<String>() {{ add("id"); }};
             HashMap<String, String> whereParams = new HashMap<String, String>() {{
                 put(KEY_USERNAME, username);
                 put(KEY_PASSWORD, password);
@@ -389,13 +606,14 @@ public class DbHelper extends SQLiteOpenHelper {
 
             if (!(c.moveToFirst()) || c.getCount() == 0){
                 c.close();
-                return false; // user not exists
+                return -1; // user not exists
             }
+            long userId = c.getLong(0);
             c.close(); // user exists
-            return true;
+            return userId;
         } catch (Exception e) {
             e.printStackTrace();
-            return false; // user not exists
+            return -1; // user not exists
         }
     }
 

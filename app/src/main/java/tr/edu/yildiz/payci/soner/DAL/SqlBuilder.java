@@ -74,6 +74,46 @@ public class SqlBuilder implements ISqlBuilder {
         }
         return sql;
     }
+    @Override
+    public String BuildSelectCommand(String tableName, ArrayList<String> selectColumns, HashMap<String, String> whereParams, HashMap<String, String> joinParams) {
+        String selectColumnsSql = String.join(", ", selectColumns) + " ";
+        String sql = String.format("SELECT %s FROM %s ", selectColumnsSql, tableName);
+
+        if (joinParams != null) {
+            sql += " LEFT JOIN ";
+            StringJoiner joiner = new StringJoiner(" AND");
+            Iterator iterator = joinParams.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry keyValuePair = (Map.Entry)iterator.next();
+                String joinerStr = !iterator.hasNext() ? " %s ON  %s.%s=%s.id " : " %s ON  %s=%s.id";
+                //keyValuePair.getKey() => joined table name     QUESTION_MEDIAS
+                //keyValuePair.getValue() => joined table column name // QUESTION_ID
+                joiner.add(String.format(joinerStr, keyValuePair.getKey(), keyValuePair.getKey(), keyValuePair.getValue(), tableName));
+                iterator.remove();
+            }
+            sql += joiner.toString();
+        }
+
+        if (whereParams != null) {
+            sql += " WHERE";
+            StringJoiner joiner = new StringJoiner(" AND");
+            Iterator iterator = whereParams.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry keyValuePair = (Map.Entry)iterator.next();
+                String joinerStr = !iterator.hasNext() ? " %s='%s' " : " %s='%s'";
+                joiner.add(String.format(joinerStr, keyValuePair.getKey(), keyValuePair.getValue().toString()));
+                iterator.remove();
+            }
+            sql += joiner.toString();
+        }
+        return sql;
+    }
+
+    @Override
+    public String BuildSelectQuestionsCommand() {
+       String sql = "SELECT  Q.*, QM.* FROM Questions Q LEFT JOIN QuestionMedias QM ON (QM.questionId = Q.id) Where Q.userId=%d";
+       return sql;
+    }
 
     @Override
     public String BuildInsertCommand(String tableName, ArrayList<String> insertSpec) {

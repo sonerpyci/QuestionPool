@@ -26,7 +26,7 @@ public class MainActivity extends AppCompatActivity
         password.setText("");
     }
 
-    private boolean checkPerson()
+    private long checkPerson()
     {
         return dbHelper.checkUsernameAndPassword(username.getText().toString(), UserBase.convertStringToSHA256(password.getText().toString()));
     }
@@ -54,11 +54,12 @@ public class MainActivity extends AppCompatActivity
 
     public void defineListeners() {
         btnSignIn.setOnClickListener((v -> {
-            if (checkPerson()) {
+            long userId = checkPerson();
+            if (userId != -1) {
                 attempt = 0;
                 Toast.makeText(MainActivity.this, String.format( "Logged In Successfully!" , 3-attempt), Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(MainActivity.this, ScreenSlideFragmentPage.class);
-                intent.putExtra("username", username.getText().toString().trim());
+                intent.putExtra("userId", userId);
                 this.startActivity(intent);
             } else {
                 attempt += 1;
