@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
+import tr.edu.yildiz.payci.soner.model.Exam;
 import tr.edu.yildiz.payci.soner.model.Person;
 import tr.edu.yildiz.payci.soner.model.Question;
 import tr.edu.yildiz.payci.soner.model.QuestionMedia;
@@ -77,7 +78,7 @@ public class DbHelper extends SQLiteOpenHelper {
     private static final String KEY_EXAM_MAX_DURATION = "maxDuration";
     //</editor-fold>
 
-    //<editor-fold desc="ExamQuestions Table Columns">
+    //<editor-fold desc="QuestionsExams Table Columns">
     private static final String KEY_QUESTIONS_EXAMS_EXAM_ID = "examId";
     private static final String KEY_QUESTIONS_EXAMS_QUESTION_ID = "questionId";
     private static final String KEY_QUESTIONS_EXAMS_POINT = "questionPoint";
@@ -142,16 +143,15 @@ public class DbHelper extends SQLiteOpenHelper {
         HashMap<String, String> createExamsQuestionsTableHashMap = new HashMap<String, String>() {{
             put(KEY_QUESTIONS_EXAMS_EXAM_ID, "INTEGER REFERENCES " + TABLE_EXAMS);
             put(KEY_QUESTIONS_EXAMS_QUESTION_ID, "INTEGER REFERENCES " + TABLE_QUESTIONS);
-            put(KEY_EXAM_DIFFICULTY, "REAL");
+            put(KEY_QUESTIONS_EXAMS_POINT, "REAL");
         }};
+
 
         String CREATE_USERS_TABLE_SQL = _sqlBuilder.BuildCreateTableCommand(TABLE_USERS, createUserTableHashMap);
         String CREATE_QUESTIONS_TABLE_SQL = _sqlBuilder.BuildCreateTableCommand(TABLE_QUESTIONS, createQuestionTableHashMap);
         String CREATE_QUESTION_MEDIAS_TABLE_SQL = _sqlBuilder.BuildCreateTableCommand(TABLE_QUESTION_MEDIAS, createQuestionMediasTableHashMap);
         String CREATE_EXAMS_TABLE_SQL = _sqlBuilder.BuildCreateTableCommand(TABLE_EXAMS, createExamsTableHashMap);
         String CREATE_QUESTIONS_TO_EXAMS_TABLE_SQL = _sqlBuilder.BuildCreateTableCommand(TABLE_QUESTIONS_TO_EXAMS, createExamsQuestionsTableHashMap);
-
-
 
         db.execSQL(CREATE_USERS_TABLE_SQL);
         db.execSQL(CREATE_QUESTIONS_TABLE_SQL);
@@ -168,10 +168,10 @@ public class DbHelper extends SQLiteOpenHelper {
         if (oldVersion != newVersion) {
             // Simplest implementation is to drop all old tables and recreate them
             db.execSQL("DROP TABLE IF EXISTS " + TABLE_QUESTIONS_TO_EXAMS);
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_QUESTION_MEDIAS);
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_QUESTIONS);
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_EXAMS);
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
+            //db.execSQL("DROP TABLE IF EXISTS " + TABLE_QUESTION_MEDIAS);
+            //db.execSQL("DROP TABLE IF EXISTS " + TABLE_QUESTIONS);
+            //db.execSQL("DROP TABLE IF EXISTS " + TABLE_EXAMS);
+            //db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
 
             onCreate(db);
         }
@@ -223,15 +223,6 @@ public class DbHelper extends SQLiteOpenHelper {
 
         try {
             ArrayList<String> selectColumns = new ArrayList<String>() {{ add("*"); }};
-
-            /*HashMap<String, String> joinParams = new HashMap<String, String>() {{
-                put(TABLE_QUESTION_MEDIAS + " QM ", "QM."+KEY_QUESTION_MEDIA_QUESTIONS_FK);
-            }};
-
-            HashMap<String, String> whereParams = new HashMap<String, String>() {{
-                put(KEY_QUESTION_USER_FK, String.valueOf(userId));
-            }};*/
-
             SQLiteDatabase db = this.getReadableDatabase();
             String sql = String.format(_sqlBuilder.BuildSelectQuestionsCommand(), userId);
 
@@ -270,6 +261,92 @@ public class DbHelper extends SQLiteOpenHelper {
         } catch (Exception e) {
             e.printStackTrace();
             return questions;
+        }
+    }
+
+    public ArrayList<Question> getQuestionsByExamId(long userId, long examId) {
+        ArrayList<Question> questions = new ArrayList<Question>();
+
+        try {
+            ArrayList<String> selectColumns = new ArrayList<String>() {{ add("*"); }};
+            SQLiteDatabase db = this.getReadableDatabase();
+            String sql = String.format(_sqlBuilder.BuildSelectQuestionsByExamIdCommand(), examId);
+
+
+            Cursor c = db.rawQuery(sql, null);
+
+            if (c.moveToFirst()){
+                do {
+                    String questionOpt_A = c.getString(0);
+                    String questionOpt_B = c.getString(1);
+                    String questionOpt_C = c.getString(2);
+                    String questionOpt_D = c.getString(3);
+                    String questionOpt_E = c.getString(4);
+                    long questionId = c.getLong(5);
+                    String questionText = c.getString(6);
+                    String correctAnswer = c.getString(7);
+
+
+                    Question question;
+                    if(!c.isNull(c.getColumnIndex("contentType"))) {
+                        long mediaId = c.getLong(10);
+                        String mediaContentType = c.getString(11);
+                        byte[] mediaContent = c.getBlob(12);
+                        QuestionMedia questionMedia = new QuestionMedia(mediaId, questionId, mediaContentType, mediaContent);
+                        question = new Question(questionId, userId, questionText, questionOpt_A, questionOpt_B, questionOpt_C, questionOpt_D, questionOpt_E, correctAnswer, questionMedia);
+                    } else {
+                        question = new Question(questionId, userId, questionText, questionOpt_A, questionOpt_B, questionOpt_C, questionOpt_D, questionOpt_E, correctAnswer);
+                    }
+
+                    questions.add(question);
+                } while(c.moveToNext());
+            }
+            c.close();
+
+            return questions;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return questions;
+        }
+    }
+
+    public ArrayList<Exam> getExamsByUserId(long userId) {
+        ArrayList<Exam> exams = new ArrayList<Exam>();
+
+        try {
+            ArrayList<String> selectColumns = new ArrayList<String>() {{ add("*"); }};
+            SQLiteDatabase db = this.getReadableDatabase();
+            String sql = String.format(_sqlBuilder.BuildSelectExamsCommand(), userId);
+            Cursor c = db.rawQuery(sql, null);
+            if (c.moveToFirst()){
+                do {
+                    long examDifficulty = c.getLong(0);
+                    long examMinDuration = c.getLong(1);
+                    String examName = c.getString(2);
+                    long examId = c.getLong(3);
+                    long examMaxDuration = c.getLong(5);
+
+                    Exam exam = new Exam(examId, userId, examName, examDifficulty, examMinDuration, examMaxDuration);
+                    exams.add(exam);
+                } while(c.moveToNext());
+            }
+            c.close();
+
+
+            for (Exam exam: exams) {
+                ArrayList<Question> questions = getQuestionsByExamId(userId, exam.getId());
+
+                exam.setQuestions(questions);
+
+
+            }
+
+
+
+            return exams;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return exams;
         }
     }
 
@@ -382,6 +459,117 @@ public class DbHelper extends SQLiteOpenHelper {
             e.printStackTrace();
             return question;
         }
+    }
+
+    public Exam insertExam(Exam exam, ArrayList<Question> questions) {
+        try {
+            ArrayList<String> insertExamKeys = new ArrayList<String>() {{
+                add(KEY_EXAM_NAME);
+                add(KEY_EXAM_USER_ID);
+                add(KEY_EXAM_DIFFICULTY);
+                add(KEY_EXAM_MIN_DURATION);
+                add(KEY_EXAM_MAX_DURATION);
+            }};
+
+            String insertExamSql = _sqlBuilder.BuildInsertCommand(TABLE_EXAMS, insertExamKeys);
+
+            SQLiteDatabase db = this.getWritableDatabase();
+            db.beginTransaction();
+            SQLiteStatement insertExamStmt = db.compileStatement(insertExamSql);
+
+            insertExamStmt.clearBindings();
+
+            insertExamStmt.bindString(1, exam.getExamName());
+            insertExamStmt.bindLong(2, exam.getUserId());
+            insertExamStmt.bindLong(3, exam.getDifficulty());
+            insertExamStmt.bindLong(4, exam.getMinDuration());
+            insertExamStmt.bindLong(5, exam.getMaxDuration());
+
+            long examId = insertExamStmt.executeInsert();
+            db.setTransactionSuccessful();
+            db.endTransaction();
+
+            exam.setId(examId);
+            ArrayList<Question> examQuestions = new ArrayList<>();
+            if (questions != null && questions.size() != 0) {
+                int questionCount = 0;
+                for (Question question: questions ) {
+                    if (question.getIsSelected()) {
+                        examQuestions.add(question);
+                    }
+                }
+                for (Question question: examQuestions ) {
+                    if (question.getIsSelected()) {
+                        ArrayList<String> insertExamQuestionKeys = new ArrayList<String>() {{
+                            add(KEY_QUESTIONS_EXAMS_QUESTION_ID);
+                            add(KEY_QUESTIONS_EXAMS_EXAM_ID);
+                            add(KEY_QUESTIONS_EXAMS_POINT);
+                        }};
+
+                        String insertExamQuestionSql = _sqlBuilder.BuildInsertCommand(TABLE_QUESTIONS_TO_EXAMS, insertExamQuestionKeys);
+
+
+                        db.beginTransaction();
+                        SQLiteStatement insertExamQuestionStmt = db.compileStatement(insertExamQuestionSql);
+
+                        insertExamQuestionStmt.clearBindings();
+
+                        double maxPoint = 100;
+
+                        insertExamQuestionStmt.bindLong(1, question.getId());
+                        insertExamQuestionStmt.bindLong(2, exam.getId());
+                        insertExamQuestionStmt.bindDouble(3, maxPoint / examQuestions.size());
+
+
+                        long row = insertExamQuestionStmt.executeInsert();
+                        db.setTransactionSuccessful();
+                        db.endTransaction();
+                    }
+
+                }
+            }
+            exam.setQuestions(examQuestions);
+            return exam;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return exam;
+        }
+    }
+
+    public void deleteQuestion(Question question) {
+        long rowCount = 0;
+        SQLiteDatabase db = this.getWritableDatabase();
+        @SuppressLint("DefaultLocale")
+        String deleteQuestionMediaSql = "DELETE FROM " + TABLE_QUESTION_MEDIAS + " WHERE questionId=?;";
+        db.beginTransaction();
+        SQLiteStatement deleteQuestionMediaStmt = db.compileStatement(deleteQuestionMediaSql);
+        deleteQuestionMediaStmt.clearBindings();
+        deleteQuestionMediaStmt.bindLong(1, question.getId());
+        rowCount = deleteQuestionMediaStmt.executeUpdateDelete();
+        db.setTransactionSuccessful();
+        db.endTransaction();
+
+
+        @SuppressLint("DefaultLocale")
+        String deleteExamQuestionsSql = "DELETE FROM " + TABLE_QUESTIONS_TO_EXAMS + " WHERE " + KEY_QUESTIONS_EXAMS_QUESTION_ID+ "=?;";
+        db.beginTransaction();
+        SQLiteStatement deleteExamQuestionStmt = db.compileStatement(deleteExamQuestionsSql);
+        deleteExamQuestionStmt.clearBindings();
+        deleteExamQuestionStmt.bindLong(1, question.getId());
+        rowCount = deleteExamQuestionStmt.executeUpdateDelete();
+        db.setTransactionSuccessful();
+        db.endTransaction();
+
+
+        String deleteQuestionSql = "DELETE FROM " + TABLE_QUESTIONS + " WHERE id=?;";
+        db.beginTransaction();
+        SQLiteStatement deleteQuestionStmt = db.compileStatement(deleteQuestionSql);
+        deleteQuestionStmt.clearBindings();
+        deleteQuestionStmt.bindLong(1, question.getId());
+        rowCount = deleteQuestionStmt.executeUpdateDelete();
+        db.setTransactionSuccessful();
+        db.endTransaction();
+
     }
 
     public Question editQuestion(Question oldQuestion, Question newQuestion) {

@@ -15,6 +15,7 @@ import java.lang.ref.WeakReference;
 import java.util.List;
 
 import tr.edu.yildiz.payci.soner.R;
+import tr.edu.yildiz.payci.soner.model.Exam;
 import tr.edu.yildiz.payci.soner.model.Question;
 
 public class RecyclerQuestionsAdapter extends RecyclerView.Adapter<RecyclerQuestionsAdapter.MyViewHolder> implements OnItemClickListener {
@@ -79,10 +80,21 @@ public class RecyclerQuestionsAdapter extends RecyclerView.Adapter<RecyclerQuest
         this.mListenerList.add(item);
         this.notifyItemRangeInserted(getItemCount() - 1, getItemCount());
     }
+
     public void editItem(Question oldItem, Question newItem) {
         int index = mListenerList.indexOf(oldItem);
         this.mListenerList.set(index, newItem);
         this.notifyItemChanged(index);
+    }
+
+    public void removeItem(Question item) {
+        this.mListenerList.remove(item);
+        this.notifyDataSetChanged();
+        //this.notifyItemRangeInserted(getItemCount() - 1, getItemCount());
+    }
+
+    public void refresh() {
+        this.notifyDataSetChanged();
     }
 
     @Override
@@ -93,6 +105,16 @@ public class RecyclerQuestionsAdapter extends RecyclerView.Adapter<RecyclerQuest
     @Override
     public boolean onQuestionItemLongClick(View v, Question item) {
         return true;
+    }
+
+    @Override
+    public void onExamItemClick(View v, Exam item) {
+        throw new UnsupportedOperationException("This Event as Not been implemented on questions {onExamItemClick}");
+    }
+
+    @Override
+    public boolean onExamItemLongClick(View v, Exam item) {
+        throw new UnsupportedOperationException("This Event as Not been implemented on questions {onExamItemClick}");
     }
 
     public class MyViewHolder extends RecyclerView.ViewHolder {

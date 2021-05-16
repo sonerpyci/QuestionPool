@@ -13,6 +13,7 @@ public class Question {
     private String e;
     private String correctAnswer;
     private QuestionMedia questionMedia;
+    private boolean isSelected;
 
     public Question(long id, long userId, String text, String a, String b, String c, String d, String e, String correctAnswer) {
         this.id = id;
@@ -39,13 +40,7 @@ public class Question {
         this.questionMedia = questionMedia;
     }
 
-
-    //* deneme için
-    public Question(String text) {
-        this.text = text;
-    }
-
-    public long getId() {
+        public long getId() {
         return id;
     }
 
@@ -123,5 +118,13 @@ public class Question {
 
     public void setQuestionMedia(QuestionMedia questionMedia) {
         this.questionMedia = questionMedia;
+    }
+
+    public boolean getIsSelected() {
+        return isSelected;
+    }
+
+    public void setIsSelected(boolean isSelected) {
+        this.isSelected = isSelected;
     }
 }

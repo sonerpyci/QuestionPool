@@ -6,16 +6,14 @@ import android.app.AlertDialog;
 import android.content.ContentResolver;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.design.widget.BaseTransientBottomBar;
 import android.support.v4.app.Fragment;
-import android.support.v4.view.ViewPager;
 import android.support.v7.widget.DefaultItemAnimator;
-import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Base64;
 import android.view.Gravity;
@@ -23,8 +21,6 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.MimeTypeMap;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
@@ -33,13 +29,10 @@ import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.Spinner;
 import android.widget.Toast;
 import android.widget.VideoView;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
@@ -47,10 +40,14 @@ import java.util.ArrayList;
 
 import tr.edu.yildiz.payci.soner.DAL.DbHelper;
 import tr.edu.yildiz.payci.soner.helpers.OnItemClickListener;
+import tr.edu.yildiz.payci.soner.helpers.QuestionSpinnerAdapter;
+import tr.edu.yildiz.payci.soner.helpers.RecyclerExamsAdapter;
 import tr.edu.yildiz.payci.soner.helpers.RecyclerQuestionsAdapter;
+import tr.edu.yildiz.payci.soner.model.Exam;
 import tr.edu.yildiz.payci.soner.model.Question;
 import tr.edu.yildiz.payci.soner.model.QuestionMedia;
 
+import static android.content.Context.MODE_PRIVATE;
 import static tr.edu.yildiz.payci.soner.helpers.IOStream.readAllBytes;
 
 /**
@@ -65,6 +62,7 @@ public class ScreenSlideFragmentHolder extends Fragment {
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String FRAGMENT_TYPE = "fragmentType";
     private static final String USER_ID = "userId";
+    private static final String MY_PREFS_NAME = "Question_Pool_SP";
     private static final Integer PICK_CONTENT_FOR_QUESTION = 1;
 
 
@@ -72,15 +70,20 @@ public class ScreenSlideFragmentHolder extends Fragment {
     private long userId;
     DbHelper dbHelper;
     RecyclerView rv;
+    RecyclerView examsRv;
     ImageButton btnAddQuestion;
-    RecyclerQuestionsAdapter adapter;
+    ImageButton btnAddExam;
+    RecyclerQuestionsAdapter questionsAdapter;
+    RecyclerExamsAdapter examsAdapter;
     ArrayList<Question> questions;
+    ArrayList<Exam> exams;
     LayoutInflater inflater;
     View popupView;
     byte[] selectedContent = null;
     Uri selectedMediaUri = null;
     String selectedContentType = null;
     boolean playingAudio = false;
+    boolean initialized = false;
     private WeakReference<OnItemClickListener> questionListenerRef;
     MediaPlayer mediaPlayer;
 
@@ -143,9 +146,6 @@ public class ScreenSlideFragmentHolder extends Fragment {
             case 1:
                 resId = R.layout.activity_exam;
                 break;
-            case 2:
-                resId = R.layout.activity_exam;
-                break;
         }
 
 
@@ -159,7 +159,13 @@ public class ScreenSlideFragmentHolder extends Fragment {
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        if (fragmentType == 0){
+
+        if (fragmentType == 0) {
+            ImageButton btnRefreshQuestions =(ImageButton) view.findViewById(R.id.refresh_questions_btn);
+            btnRefreshQuestions.setOnClickListener((v -> {
+                refreshQuestions();
+            }));
+
             btnAddQuestion = (ImageButton) view.findViewById(R.id.add_new_question_btn);
             btnAddQuestion.setOnClickListener((v -> {
                 createQuestionPopup(view, null);
@@ -173,11 +179,10 @@ public class ScreenSlideFragmentHolder extends Fragment {
             rv.setNestedScrollingEnabled(false);
             rv.setHasFixedSize(true);
 
-            adapter = new RecyclerQuestionsAdapter(questions, getContext(), new OnItemClickListener() {
+            questionsAdapter = new RecyclerQuestionsAdapter(questions, getContext(), new OnItemClickListener() {
 
                 @Override
                 public void onQuestionItemClick(View v, Question item) {
-                    Toast.makeText(getContext(), String.format( "Soru : %s ?", item.getText()), Toast.LENGTH_SHORT).show();
                 }
                 @Override
                 public boolean onQuestionItemLongClick(View v, Question item) {
@@ -211,23 +216,115 @@ public class ScreenSlideFragmentHolder extends Fragment {
                                                 @Override
                                                 public void onClick(DialogInterface dialog, int which) {
                                                     //TODO : DELETE QUESTION
-                                                    //deleteQuestion(item);
+                                                    deleteQuestion(item);
                                                 }
                                             }).show();
                                 }
                             });
 
                     builder.create().show();
-                    //questionListenerRef.get().onQuestionItemLongClick(v, item);
+                    return true;
+                }
+
+                @Override
+                public void onExamItemClick(View v, Exam item) {
+
+                }
+
+                @Override
+                public boolean onExamItemLongClick(View v, Exam item) {
+                    return false;
+                }
+
+            });
+            rv.setAdapter(questionsAdapter);
+            refreshQuestions();
+        } else if (fragmentType == 1) {
+            ImageButton btnRefreshExams =(ImageButton) view.findViewById(R.id.refresh_exams_btn);
+            btnRefreshExams.setOnClickListener((v -> {
+                refreshExams();
+            }));
+
+            btnAddExam = (ImageButton) view.findViewById(R.id.add_new_exam_btn);
+            btnAddExam.setOnClickListener((v -> {
+                createExamPopup(view, null);
+            }));
+
+            examsRv = (RecyclerView) view.findViewById(R.id.exam_recycler_view);
+
+            exams = dbHelper.getExamsByUserId(userId);
+            /*exams = new ArrayList<>();
+            exams.add(new Exam(1,1, "deneme sınav", 3, 15, 120 ));
+            exams.add(new Exam(2,1, "deneme sınav2", 3, 20, 90 ));*/
 
 
-                    Toast.makeText(getContext(), String.format( "Soru uzun basıldı : %s ?", item.getText()), Toast.LENGTH_SHORT).show();
+            examsRv.setItemAnimator(new DefaultItemAnimator());
+            examsRv.setNestedScrollingEnabled(false);
+            examsRv.setHasFixedSize(true);
+
+            examsAdapter = new RecyclerExamsAdapter(exams, getContext(), new OnItemClickListener() {
+
+                @Override
+                public void onQuestionItemClick(View v, Question item) {
+                }
+                @Override
+                public boolean onQuestionItemLongClick(View v, Question item) {
+                    return false;
+                }
+
+                @Override
+                public void onExamItemClick(View v, Exam item) {
+                    if(!initialized) {
+                        refreshExams();
+                        initialized = true;
+                    }
+                }
+
+                @Override
+                public boolean onExamItemLongClick(View v, Exam item) {
+                    final AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
+                    builder.setTitle("Attention")
+                            .setMessage("Please select an operation to perform for the question " + item.getId())
+                            .setNeutralButton("Back", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+
+                                }
+                            })
+                            .setPositiveButton("Send", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    //sendExamAsText(view, item);
+                                }
+                            });
+
+                    builder.create().show();
                     return true;
                 }
 
             });
-            rv.setAdapter(adapter);
+            examsRv.setAdapter(examsAdapter);
+            //refreshExams();
         }
+    }
+
+    public void refreshQuestions() {
+        questionsAdapter.refresh();
+    }
+
+    public void refreshExams() {
+        examsAdapter.refresh();
+    }
+
+    public void deleteQuestion(Question question) {
+        try {
+            dbHelper.deleteQuestion(question);
+            Toast.makeText(getActivity(), "Question Deleted.", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(getActivity(), "Cannot remove specified question. Question May be used in an exam. Please check it and try again.", Toast.LENGTH_SHORT).show();
+        }
+        questionsAdapter.removeItem(question);
     }
 
     @SuppressLint("NonConstantResourceId")
@@ -251,7 +348,6 @@ public class ScreenSlideFragmentHolder extends Fragment {
                 view.setAlpha((float) 1);
             }
         });
-
 
         ImageButton btnPopupAddQuestion = popupView.findViewById(R.id.add_question_btn);
         ImageButton btnPopupEditQuestion = popupView.findViewById(R.id.edit_question_btn);
@@ -352,13 +448,106 @@ public class ScreenSlideFragmentHolder extends Fragment {
 
 
         // dismiss the popup window when touched
-        popupView.setOnTouchListener(new View.OnTouchListener() {
+        /*popupView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 popupWindow.dismiss();
                 return true;
             }
+        });*/
+
+    }
+
+    @SuppressLint("NonConstantResourceId")
+    public void createExamPopup(View view, Exam exam) {
+        popupView = inflater.inflate(R.layout.popup_add_edit_exam, null);
+
+        // create the popup window
+        int width = LinearLayout.LayoutParams.WRAP_CONTENT;
+        int height = LinearLayout.LayoutParams.WRAP_CONTENT;
+        boolean focusable = true; // lets taps outside the popup also dismiss it
+        final PopupWindow popupWindow = new PopupWindow(popupView, width, height, focusable);
+        popupWindow.setOutsideTouchable(true);
+        // show the popup window
+        // which view you pass in doesn't matter, it is only used for the window tolken
+        popupWindow.showAtLocation(view, Gravity.CENTER, 0, 0);
+        view.setAlpha((float) 0.1);
+
+        popupWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
+            @Override
+            public void onDismiss() {
+                view.setAlpha((float) 1);
+            }
         });
+
+
+        ImageButton btnPopupAddQuestion = popupView.findViewById(R.id.add_exam_btn);
+        ImageButton btnPopupEditQuestion = popupView.findViewById(R.id.edit_exam_btn);
+
+        Spinner spinner = (Spinner) popupView.findViewById(R.id.question_spinner);
+        questions = dbHelper.getQuestionsByUserId(userId);
+        QuestionSpinnerAdapter myAdapter = new QuestionSpinnerAdapter(getContext(), 0, questions);
+        spinner.setAdapter(myAdapter);
+
+        if (exam == null) {
+            btnPopupEditQuestion.setVisibility(View.GONE);
+            btnPopupAddQuestion.setVisibility(View.VISIBLE);
+
+
+
+            EditText examTextElement = (EditText) popupView.findViewById(R.id.exam_name_value);
+            EditText examDifficultyTextElement = (EditText) popupView.findViewById(R.id.difficulty_value);
+            EditText minDurationElement = (EditText) popupView.findViewById(R.id.min_duration_value);
+            EditText maxDurationElement = (EditText) popupView.findViewById(R.id.max_duration_value);
+
+            SharedPreferences prefs = getActivity().getSharedPreferences(MY_PREFS_NAME, MODE_PRIVATE);
+
+            int examDifficulty_SP = prefs.getInt("examDifficulty", 3);
+            int examMinDuration_SP = prefs.getInt("examMinDuration", 15);
+            int examMaxDuration_SP = prefs.getInt("examMaxDuration", 90);
+
+            examDifficultyTextElement.setText(String.valueOf(examDifficulty_SP));
+            minDurationElement.setText(String.valueOf(examMinDuration_SP));
+            maxDurationElement.setText(String.valueOf(examMaxDuration_SP));
+
+            btnPopupAddQuestion.setOnClickListener((v -> {
+                insertNewExamOnClick(popupView);
+                popupWindow.dismiss();
+            }));
+
+        } else {
+            btnPopupAddQuestion.setVisibility(View.GONE);
+            btnPopupEditQuestion.setVisibility(View.VISIBLE);
+            EditText examTextElement = (EditText) popupView.findViewById(R.id.exam_name_value);
+            EditText examDifficultyTextElement = (EditText) popupView.findViewById(R.id.difficulty_value);
+            EditText minDurationElement = (EditText) popupView.findViewById(R.id.min_duration_value);
+            EditText maxDurationElement = (EditText) popupView.findViewById(R.id.max_duration_value);
+
+            examTextElement.setText(exam.getExamName());
+            examDifficultyTextElement.setText(String.valueOf(exam.getDifficulty()));
+            minDurationElement.setText(String.valueOf(exam.getMinDuration()));
+            maxDurationElement.setText(String.valueOf(exam.getMaxDuration()));
+
+            btnPopupEditQuestion.setOnClickListener((v -> {
+                rv.stopScroll();
+                //editExamOnClick(popupView, exam);
+                popupWindow.dismiss();
+            }));
+
+
+        }
+
+
+
+
+        // dismiss the popup window when touched
+        /*popupView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                popupWindow.dismiss();
+                return true;
+            }
+        });*/
 
     }
 
@@ -427,20 +616,6 @@ public class ScreenSlideFragmentHolder extends Fragment {
     {
         ContentResolver cr = getActivity().getContentResolver();
         return cr.getType(uri);
-    }
-
-    public void PlayAudio(String base64EncodedString){
-        try
-        {
-            String url = "data:audio/mp3;base64,"+base64EncodedString;
-            MediaPlayer mediaPlayer = new MediaPlayer();
-            mediaPlayer.setDataSource(url);
-            mediaPlayer.prepare();
-            mediaPlayer.start();
-        }
-        catch(Exception ex){
-            System.out.print(ex.getMessage());
-        }
     }
 
     private void playMp3(byte[] mp3SoundByteArray)
@@ -519,12 +694,39 @@ public class ScreenSlideFragmentHolder extends Fragment {
         Question question = new Question(0, userId, questionText, questionOpt_A, questionOpt_B, questionOpt_C, questionOpt_D, questionOpt_E, correctAnswer, questionMedia);
         question = dbHelper.insertQuestion(question);
 
-        adapter.addItem(question);
+        questionsAdapter.addItem(question);
 
         if (question.getId() != 0){
             Toast.makeText(getContext(), String.format("Question successfully saved."), Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(getContext(), String.format("Error on Saving Question."), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public void insertNewExamOnClick(View popupView) {
+        EditText examNameElement = (EditText) popupView.findViewById(R.id.exam_name_value);
+        EditText examDifficultyElement = (EditText) popupView.findViewById(R.id.difficulty_value);
+        EditText minDurationElement = (EditText) popupView.findViewById(R.id.min_duration_value);
+        EditText maxDurationElement = (EditText) popupView.findViewById(R.id.max_duration_value);
+
+        String examName = examNameElement.getText().toString().trim();
+        int examDifficulty = Integer.parseInt(examDifficultyElement.getText().toString().trim());
+        int minDuration = Integer.parseInt(minDurationElement.getText().toString().trim());
+        int maxDuration = Integer.parseInt(maxDurationElement.getText().toString().trim());
+
+
+
+
+
+        Exam exam = new Exam(0, userId, examName, examDifficulty, minDuration, maxDuration);
+        exam = dbHelper.insertExam(exam, questions);
+
+        examsAdapter.addItem(exam);
+
+        if (exam.getId() != 0){
+            Toast.makeText(getContext(), String.format("Exam successfully saved."), Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(getContext(), String.format("Error on Saving Exam."), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -581,7 +783,7 @@ public class ScreenSlideFragmentHolder extends Fragment {
         Question editedQuestion = new Question(question.getId(), question.getUserId(), questionText, questionOpt_A, questionOpt_B, questionOpt_C, questionOpt_D, questionOpt_E, correctAnswer, questionMedia);
         editedQuestion = dbHelper.editQuestion(question, editedQuestion);
 
-        adapter.editItem(question, editedQuestion);
+        questionsAdapter.editItem(question, editedQuestion);
 
         if (question.getId() != 0){
             Toast.makeText(getContext(), String.format("Question successfully saved."), Toast.LENGTH_SHORT).show();

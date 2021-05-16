@@ -115,6 +115,18 @@ public class SqlBuilder implements ISqlBuilder {
        return sql;
     }
 
+    public String BuildSelectQuestionsByExamIdCommand() {
+       String sql = "SELECT  Q.*, QM.* FROM QuestionsExams QE " +
+               "INNER JOIN Questions Q ON (Q.id = QE.questionId) " +
+               "LEFT JOIN QuestionMedias QM ON (QM.questionId = Q.id) " +
+               "Where QE.examId=%d";
+       return sql;
+    }
+
+    public String BuildSelectExamsCommand() {
+        return "SELECT * FROM Exams Where userId=%d;";
+    }
+
     @Override
     public String BuildInsertCommand(String tableName, ArrayList<String> insertSpec) {
         /*
