@@ -9,10 +9,13 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.FileProvider;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.RecyclerView;
 import android.util.Base64;
@@ -33,6 +36,7 @@ import android.widget.Spinner;
 import android.widget.Toast;
 import android.widget.VideoView;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
@@ -43,6 +47,7 @@ import tr.edu.yildiz.payci.soner.helpers.OnItemClickListener;
 import tr.edu.yildiz.payci.soner.helpers.QuestionSpinnerAdapter;
 import tr.edu.yildiz.payci.soner.helpers.RecyclerExamsAdapter;
 import tr.edu.yildiz.payci.soner.helpers.RecyclerQuestionsAdapter;
+import tr.edu.yildiz.payci.soner.helpers.SerializableManager;
 import tr.edu.yildiz.payci.soner.model.Exam;
 import tr.edu.yildiz.payci.soner.model.Question;
 import tr.edu.yildiz.payci.soner.model.QuestionMedia;
@@ -294,7 +299,7 @@ public class ScreenSlideFragmentHolder extends Fragment {
                             .setPositiveButton("Send", new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
-                                    //sendExamAsText(view, item);
+                                    sendExam2(view, item);
                                 }
                             });
 
@@ -791,4 +796,50 @@ public class ScreenSlideFragmentHolder extends Fragment {
             Toast.makeText(getContext(), String.format("Error on Saving Question."), Toast.LENGTH_SHORT).show();
         }
     }
+
+    public void sendExam2(View view, Exam exam) {
+        String filename = exam.getId()+".txt";
+        SerializableManager.saveSerializable(getContext(), exam, filename);
+        Intent intent = new Intent(android.content.Intent.ACTION_SEND);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.setType("text/plain");
+
+        String folder = getContext().getFilesDir().getAbsolutePath();
+
+
+
+        //File file = new File(exam.getExamName()+".txt");
+        File file = new File(folder + "/" + filename);
+
+        //Uri uri = Uri.parse(file.toString());
+
+        Uri uri = FileProvider.getUriForFile(getContext(), getContext().getApplicationContext().getPackageName() + ".provider", file);
+
+
+
+        Intent sharingIntent = new Intent(Intent.ACTION_SEND);
+        sharingIntent.setType("text/*");
+        sharingIntent.putExtra(Intent.EXTRA_STREAM, uri);
+        startActivity(Intent.createChooser(sharingIntent, "share file with"));
+    }
+
+
+    /*public void sendExamAsText(View view, Exam exam) {
+
+        Intent intent = new Intent(android.content.Intent.ACTION_SEND);
+
+
+
+
+        intent.setType("text/plain");
+
+        intent.putExtra(android.content.Intent.EXTRA_SUBJECT, getString(R.string.share_subject));
+        intent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);
+
+        //startActivity(Intent.createChooser(intent, getString(R.string.share_using)));
+    }*/
+
+
+
+
 }

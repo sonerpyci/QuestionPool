@@ -67,41 +67,12 @@ public class QuestionSpinnerAdapter extends ArrayAdapter<Question> {
         holder.question_D_TextView.setText(listState.get(position).getD());
         holder.question_E_TextView.setText(listState.get(position).getE());
 
-        switch (listState.get(position).getCorrectAnswer()){
-            case "A" :
-                holder.question_A_TextView.setTextColor(Color.parseColor("#50c7c7"));
-                holder.question_A_TextView.setTypeface(null, Typeface.BOLD);
-                break;
-            case "B" :
-                holder.question_B_TextView.setTextColor(Color.parseColor("#50c7c7"));
-                holder.question_B_TextView.setTypeface(null, Typeface.BOLD);
-                break;
-            case "C" :
-                holder.question_C_TextView.setTextColor(Color.parseColor("#50c7c7"));
-                holder.question_C_TextView.setTypeface(null, Typeface.BOLD);
-                break;
-            case "D" :
-                holder.question_D_TextView.setTextColor(Color.parseColor("#50c7c7"));
-                holder.question_D_TextView.setTypeface(null, Typeface.BOLD);
-                break;
-            case "E" :
-                holder.question_E_TextView.setTextColor(Color.parseColor("#50c7c7"));
-                holder.question_E_TextView.setTypeface(null, Typeface.BOLD);
-                break;
-        }
-
-
-
         // To check weather checked event fire from getview() or user input
         isFromView = true;
         holder.questionCheckBox.setChecked(listState.get(position).getIsSelected());
         isFromView = false;
 
-        if ((position == 0)) {
-            holder.questionCheckBox.setVisibility(View.INVISIBLE);
-        } else {
-            holder.questionCheckBox.setVisibility(View.VISIBLE);
-        }
+
         holder.questionCheckBox.setTag(position);
         holder.questionCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 

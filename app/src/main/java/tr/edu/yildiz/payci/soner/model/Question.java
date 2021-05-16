@@ -1,8 +1,9 @@
 package tr.edu.yildiz.payci.soner.model;
 
+import java.io.Serializable;
 import java.util.Date;
 
-public class Question {
+public class Question implements Serializable {
     private long id;
     private long userId;
     private String text;

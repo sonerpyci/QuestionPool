@@ -1,8 +1,9 @@
 package tr.edu.yildiz.payci.soner.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Exam {
+public class Exam implements Serializable {
 
     private long id;
     private long userId;

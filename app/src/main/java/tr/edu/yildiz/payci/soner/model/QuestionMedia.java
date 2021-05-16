@@ -1,6 +1,8 @@
 package tr.edu.yildiz.payci.soner.model;
 
-public class QuestionMedia {
+import java.io.Serializable;
+
+public class QuestionMedia implements Serializable {
     private long id;
     private long questionId;
     private String contentType;
